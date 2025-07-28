@@ -153,7 +153,7 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 出発日
@@ -162,7 +162,7 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
                 disabled={!isCreator}
               />
@@ -175,7 +175,7 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 min={startDate}
                 required
                 disabled={!isCreator}
@@ -192,7 +192,7 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
           )}
 
           <div className="flex gap-3 pt-4">
-            {isCreator && (
+            {isCreator ? (
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
@@ -201,14 +201,15 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
                 <Trash2 className="w-4 h-4" />
                 削除
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                キャンセル
+              </button>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-            >
-              キャンセル
-            </button>
             <button
               type="submit"
               disabled={!isCreator}
