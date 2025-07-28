@@ -12,8 +12,7 @@ interface CreateGroupModalProps {
 
 export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState('');
-  const [memberEmails, setMemberEmails] = useState(['']);
-  
+  const [memberEmails, setMemberEmails] = useState([''])
   const { createGroup, addMemberToGroup } = useTravelStore();
   const { user } = useAuthStore();
 
@@ -29,16 +28,18 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
     setMemberEmails(updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !groupName.trim()) return;
 
-    const groupId = createGroup(groupName, user.id);
-    
+    const groupId = await createGroup(groupName);
+
     // Add members
-    memberEmails
-      .filter(email => email.trim())
-      .forEach(email => addMemberToGroup(groupId, email.trim()));
+    await Promise.all(
+      memberEmails
+        .filter(email => email.trim())
+        .map(email => addMemberToGroup(groupId, email.trim()))
+    );
 
     setGroupName('');
     setMemberEmails(['']);

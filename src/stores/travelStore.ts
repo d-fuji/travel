@@ -9,20 +9,20 @@ interface TravelState {
   itineraryItems: ItineraryItem[];
   wishlistItems: WishlistItem[];
   isLoading: boolean;
-  
+
   // Data fetching
   fetchGroups: () => Promise<void>;
-  fetchTravels: () => Promise<void>;  
+  fetchTravels: () => Promise<void>;
   fetchItineraryItems: (travelId: string) => Promise<void>;
   fetchWishlistItems: (travelId: string) => Promise<void>;
-  
+
   // Travel Group actions
   createGroup: (name: string) => Promise<string>;
   addMemberToGroup: (groupId: string, userId: string) => Promise<void>;
-  
+
   // Travel actions
   createTravel: (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => Promise<string>;
-  
+
   // Itinerary actions
   addItineraryItem: (item: {
     title: string;
@@ -36,7 +36,7 @@ interface TravelState {
   }) => Promise<void>;
   updateItineraryItem: (id: string, updates: Partial<ItineraryItem>) => Promise<void>;
   deleteItineraryItem: (id: string) => Promise<void>;
-  
+
   // Wishlist actions
   addWishlistItem: (item: {
     name: string;
@@ -46,7 +46,7 @@ interface TravelState {
   }) => Promise<void>;
   toggleWishlistShare: (id: string) => Promise<void>;
   moveWishlistToItinerary: (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => Promise<void>;
-  
+
   // Legacy mock data for development
   initializeWithMockData: () => void;
 }
@@ -64,7 +64,7 @@ const mockGroups: TravelGroup[] = [
     createdAt: new Date('2024-01-01')
   },
   {
-    id: 'group-2', 
+    id: 'group-2',
     name: 'カップル旅行',
     members: [
       { id: 'user-4', email: 'partner@example.com', name: 'パートナー' }
@@ -134,7 +134,7 @@ export const useTravelStore = create<TravelState>()(
       itineraryItems: [],
       wishlistItems: [],
       isLoading: false,
-      
+
       // Data fetching
       fetchGroups: async () => {
         set({ isLoading: true });
@@ -146,7 +146,7 @@ export const useTravelStore = create<TravelState>()(
           console.error('Failed to fetch groups:', error);
         }
       },
-      
+
       fetchTravels: async () => {
         set({ isLoading: true });
         try {
@@ -157,7 +157,7 @@ export const useTravelStore = create<TravelState>()(
           console.error('Failed to fetch travels:', error);
         }
       },
-      
+
       fetchItineraryItems: async (travelId: string) => {
         try {
           const itineraryItems = await itineraryApi.getByTravel(travelId);
@@ -166,7 +166,7 @@ export const useTravelStore = create<TravelState>()(
           console.error('Failed to fetch itinerary items:', error);
         }
       },
-      
+
       fetchWishlistItems: async (travelId: string) => {
         try {
           const wishlistItems = await wishlistApi.getByTravel(travelId);
@@ -175,7 +175,7 @@ export const useTravelStore = create<TravelState>()(
           console.error('Failed to fetch wishlist items:', error);
         }
       },
-  
+
       createGroup: async (name: string) => {
         try {
           const newGroup = await travelGroupsApi.create(name);
@@ -188,7 +188,7 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       addMemberToGroup: async (groupId: string, userId: string) => {
         try {
           await travelGroupsApi.addMember(groupId, userId);
@@ -199,7 +199,7 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       createTravel: async (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => {
         try {
           const newTravel = await travelsApi.create({
@@ -218,7 +218,7 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       addItineraryItem: async (item) => {
         try {
           console.log('Attempting to create itinerary item:', item);
@@ -228,14 +228,15 @@ export const useTravelStore = create<TravelState>()(
           }));
         } catch (error) {
           console.error('Failed to add itinerary item:', error);
-          if (error.response) {
-            console.error('Error response:', error.response.data);
-            console.error('Error status:', error.response.status);
+          if (typeof error === 'object' && error !== null && 'response' in error) {
+            const err = error as { response: { data: any; status: any } };
+            console.error('Error response:', err.response.data);
+            console.error('Error status:', err.response.status);
           }
           throw error;
         }
       },
-      
+
       updateItineraryItem: async (id: string, updates) => {
         try {
           const updatedItem = await itineraryApi.update(id, updates);
@@ -249,7 +250,7 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       deleteItineraryItem: async (id: string) => {
         try {
           await itineraryApi.delete(id);
@@ -261,7 +262,7 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       addWishlistItem: async (item) => {
         try {
           const newItem = await wishlistApi.create(item);
@@ -273,7 +274,7 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       toggleWishlistShare: async (id: string) => {
         try {
           const updatedItem = await wishlistApi.toggleShare(id);
@@ -287,11 +288,11 @@ export const useTravelStore = create<TravelState>()(
           throw error;
         }
       },
-      
+
       moveWishlistToItinerary: async (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => {
         const { wishlistItems, addItineraryItem } = get();
         const wishlistItem = wishlistItems.find(item => item.id === wishlistId);
-        
+
         if (wishlistItem) {
           try {
             await addItineraryItem({
@@ -307,7 +308,7 @@ export const useTravelStore = create<TravelState>()(
           }
         }
       },
-      
+
       initializeWithMockData: () => {
         const { groups, travels } = get();
         // Only initialize if no data exists
