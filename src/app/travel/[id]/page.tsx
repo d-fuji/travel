@@ -6,27 +6,29 @@ import { useTravelStore } from '@/stores/travelStore';
 import Layout from '@/components/Layout';
 import ItineraryBoard from '@/components/ItineraryBoard';
 import WishlistPanel from '@/components/WishlistPanel';
+import { formatDate, parseDate } from '@/utils/dateUtils';
 import { Calendar, Heart, ArrowLeft } from 'lucide-react';
 
 export default function TravelDetailPage({ params }: { params: { id: string } }) {
-  const { user, isAuthenticated, setUser } = useAuthStore();
-  const { travels, groups } = useTravelStore();
+  const { user, isAuthenticated, setUser, initializeAuth } = useAuthStore();
+  const { travels, groups, fetchTravels, fetchGroups, isLoading } = useTravelStore();
   
   const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist'>('itinerary');
   const [mounted, setMounted] = useState(false);
 
-  // Initialize user from localStorage
+  // Initialize auth and data
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, [setUser]);
-
-  // Wait for hydration
-  useEffect(() => {
+    initializeAuth();
     setMounted(true);
-  }, []);
+  }, [initializeAuth]);
+
+  // Fetch data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && mounted) {
+      fetchTravels();
+      fetchGroups();
+    }
+  }, [isAuthenticated, mounted, fetchTravels, fetchGroups]);
 
   if (!isAuthenticated) {
     return <div>Loading...</div>;
@@ -34,7 +36,7 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
 
   const travel = travels.find(t => t.id === params.id);
 
-  if (!mounted) {
+  if (!mounted || isLoading) {
     return (
       <Layout>
         <div className="p-4 text-center">
@@ -51,6 +53,14 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
           <p className="text-gray-500">旅行が見つかりません</p>
           <p className="text-sm text-gray-400 mt-2">Travel ID: {params.id}</p>
           <p className="text-sm text-gray-400">Available travels: {travels.length}</p>
+          <div className="mt-4">
+            <button 
+              onClick={() => window.history.back()}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              戻る
+            </button>
+          </div>
         </div>
       </Layout>
     );
@@ -78,7 +88,7 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
             <div className="flex-1">
               <h1 className="text-xl font-bold text-gray-900">{travel.name}</h1>
               <p className="text-sm text-gray-500">
-                {travel.destination} • {travel.startDate.toLocaleDateString('ja-JP')} - {travel.endDate.toLocaleDateString('ja-JP')}
+                {travel.destination} • {formatDate(travel.startDate)} - {formatDate(travel.endDate)}
               </p>
               {group && (
                 <p className="text-sm text-gray-500">{group.name}</p>
@@ -113,8 +123,8 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
           {activeTab === 'itinerary' && (
             <ItineraryBoard
               travelId={travel.id}
-              startDate={travel.startDate}
-              endDate={travel.endDate}
+              startDate={parseDate(travel.startDate) || new Date()}
+              endDate={parseDate(travel.endDate) || new Date()}
             />
           )}
           

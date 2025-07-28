@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
 import { Heart, Share2, Plus, ArrowRight } from 'lucide-react';
@@ -10,8 +10,13 @@ interface WishlistPanelProps {
 }
 
 export default function WishlistPanel({ travelId }: WishlistPanelProps) {
-  const { wishlistItems, addWishlistItem, toggleWishlistShare, moveWishlistToItinerary } = useTravelStore();
+  const { wishlistItems, addWishlistItem, toggleWishlistShare, moveWishlistToItinerary, fetchWishlistItems } = useTravelStore();
   const { user } = useAuthStore();
+
+  // Fetch wishlist items for this travel
+  useEffect(() => {
+    fetchWishlistItems(travelId);
+  }, [travelId, fetchWishlistItems]);
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -28,7 +33,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
     addWishlistItem({
       name: newItemName,
       description: newItemDescription,
-      addedBy: user.id,
       travelId,
       isShared: false,
     });

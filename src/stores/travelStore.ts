@@ -1,32 +1,53 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Travel, TravelGroup, ItineraryItem, WishlistItem } from '@/types';
+import { travelGroupsApi, travelsApi, itineraryApi, wishlistApi } from '@/services/api';
 
 interface TravelState {
   groups: TravelGroup[];
   travels: Travel[];
   itineraryItems: ItineraryItem[];
   wishlistItems: WishlistItem[];
-  _hasHydrated: boolean;
+  isLoading: boolean;
+  
+  // Data fetching
+  fetchGroups: () => Promise<void>;
+  fetchTravels: () => Promise<void>;  
+  fetchItineraryItems: (travelId: string) => Promise<void>;
+  fetchWishlistItems: (travelId: string) => Promise<void>;
   
   // Travel Group actions
-  createGroup: (name: string, createdBy: string) => string;
-  addMemberToGroup: (groupId: string, email: string) => void;
+  createGroup: (name: string) => Promise<string>;
+  addMemberToGroup: (groupId: string, userId: string) => Promise<void>;
   
   // Travel actions
-  createTravel: (name: string, destination: string, startDate: Date, endDate: Date, groupId: string, createdBy: string) => string;
+  createTravel: (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => Promise<string>;
   
   // Itinerary actions
-  addItineraryItem: (item: Omit<ItineraryItem, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateItineraryItem: (id: string, updates: Partial<ItineraryItem>) => void;
-  deleteItineraryItem: (id: string) => void;
+  addItineraryItem: (item: {
+    title: string;
+    description?: string;
+    location?: string;
+    startTime?: string;
+    endTime?: string;
+    date: string;
+    period: 'morning' | 'afternoon' | 'evening';
+    travelId: string;
+  }) => Promise<void>;
+  updateItineraryItem: (id: string, updates: Partial<ItineraryItem>) => Promise<void>;
+  deleteItineraryItem: (id: string) => Promise<void>;
   
   // Wishlist actions
-  addWishlistItem: (item: Omit<WishlistItem, 'id' | 'createdAt'>) => void;
-  toggleWishlistShare: (id: string) => void;
-  moveWishlistToItinerary: (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => void;
+  addWishlistItem: (item: {
+    name: string;
+    description?: string;
+    isShared?: boolean;
+    travelId: string;
+  }) => Promise<void>;
+  toggleWishlistShare: (id: string) => Promise<void>;
+  moveWishlistToItinerary: (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => Promise<void>;
   
-  // Hydration
+  // Legacy mock data for development
   initializeWithMockData: () => void;
 }
 
@@ -90,34 +111,6 @@ const mockItineraryItems: ItineraryItem[] = [
     createdBy: '1',
     createdAt: new Date('2024-01-16'),
     updatedAt: new Date('2024-01-16')
-  },
-  {
-    id: 'item-2',
-    title: 'ホテルチェックイン',
-    description: 'リゾートホテルに宿泊',
-    location: 'ANAインターコンチネンタル万座ビーチリゾート',
-    startTime: '15:00',
-    endTime: '',
-    date: '2024-03-20',
-    period: 'afternoon',
-    travelId: 'travel-1',
-    createdBy: '1',
-    createdAt: new Date('2024-01-16'),
-    updatedAt: new Date('2024-01-16')
-  },
-  {
-    id: 'item-3',
-    title: '美ら海水族館',
-    description: 'ジンベエザメを見に行く',
-    location: '沖縄美ら海水族館',
-    startTime: '09:00',
-    endTime: '12:00',
-    date: '2024-03-21',
-    period: 'morning',
-    travelId: 'travel-1',
-    createdBy: '1',
-    createdAt: new Date('2024-01-16'),
-    updatedAt: new Date('2024-01-16')
   }
 ];
 
@@ -130,24 +123,6 @@ const mockWishlistItems: WishlistItem[] = [
     travelId: 'travel-1',
     isShared: true,
     createdAt: new Date('2024-01-17')
-  },
-  {
-    id: 'wish-2',
-    name: '国際通り',
-    description: 'お土産を買う',
-    addedBy: '1',
-    travelId: 'travel-1',
-    isShared: false,
-    createdAt: new Date('2024-01-17')
-  },
-  {
-    id: 'wish-3',
-    name: '清水寺',
-    description: '桜の季節に訪問',
-    addedBy: '1',
-    travelId: 'travel-2',
-    isShared: true,
-    createdAt: new Date('2024-01-21')
   }
 ];
 
@@ -158,179 +133,243 @@ export const useTravelStore = create<TravelState>()(
       travels: [],
       itineraryItems: [],
       wishlistItems: [],
+      isLoading: false,
       
-      // Initialize with mock data on first load
-      _hasHydrated: false,
+      // Data fetching
+      fetchGroups: async () => {
+        set({ isLoading: true });
+        try {
+          const groups = await travelGroupsApi.getAll();
+          set({ groups, isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          console.error('Failed to fetch groups:', error);
+        }
+      },
+      
+      fetchTravels: async () => {
+        set({ isLoading: true });
+        try {
+          const travels = await travelsApi.getAll();
+          set({ travels, isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          console.error('Failed to fetch travels:', error);
+        }
+      },
+      
+      fetchItineraryItems: async (travelId: string) => {
+        try {
+          const itineraryItems = await itineraryApi.getByTravel(travelId);
+          set({ itineraryItems });
+        } catch (error) {
+          console.error('Failed to fetch itinerary items:', error);
+        }
+      },
+      
+      fetchWishlistItems: async (travelId: string) => {
+        try {
+          const wishlistItems = await wishlistApi.getByTravel(travelId);
+          set({ wishlistItems });
+        } catch (error) {
+          console.error('Failed to fetch wishlist items:', error);
+        }
+      },
   
-  createGroup: (name: string, createdBy: string) => {
-    const id = Date.now().toString();
-    const newGroup: TravelGroup = {
-      id,
-      name,
-      members: [],
-      createdBy,
-      createdAt: new Date(),
-    };
-    
-    set(state => ({
-      groups: [...state.groups, newGroup]
-    }));
-    
-    return id;
-  },
-  
-  addMemberToGroup: (groupId: string, email: string) => {
-    // Mock member addition
-    set(state => ({
-      groups: state.groups.map(group => 
-        group.id === groupId 
-          ? { ...group, members: [...group.members, { id: Date.now().toString(), email, name: email.split('@')[0] }] }
-          : group
-      )
-    }));
-  },
-  
-  createTravel: (name: string, destination: string, startDate: Date, endDate: Date, groupId: string, createdBy: string) => {
-    const id = Date.now().toString();
-    const newTravel: Travel = {
-      id,
-      name,
-      destination,
-      startDate,
-      endDate,
-      groupId,
-      createdBy,
-      createdAt: new Date(),
-    };
-    
-    set(state => ({
-      travels: [...state.travels, newTravel]
-    }));
-    
-    return id;
-  },
-  
-  addItineraryItem: (item) => {
-    const newItem: ItineraryItem = {
-      ...item,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    
-    set(state => ({
-      itineraryItems: [...state.itineraryItems, newItem]
-    }));
-  },
-  
-  updateItineraryItem: (id: string, updates) => {
-    set(state => ({
-      itineraryItems: state.itineraryItems.map(item =>
-        item.id === id ? { ...item, ...updates, updatedAt: new Date() } : item
-      )
-    }));
-  },
-  
-  deleteItineraryItem: (id: string) => {
-    set(state => ({
-      itineraryItems: state.itineraryItems.filter(item => item.id !== id)
-    }));
-  },
-  
-  addWishlistItem: (item) => {
-    const newItem: WishlistItem = {
-      ...item,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    
-    set(state => ({
-      wishlistItems: [...state.wishlistItems, newItem]
-    }));
-  },
-  
-  toggleWishlistShare: (id: string) => {
-    set(state => ({
-      wishlistItems: state.wishlistItems.map(item =>
-        item.id === id ? { ...item, isShared: !item.isShared } : item
-      )
-    }));
-  },
-  
-  moveWishlistToItinerary: (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => {
-    const { wishlistItems, addItineraryItem } = get();
-    const wishlistItem = wishlistItems.find(item => item.id === wishlistId);
-    
-    if (wishlistItem) {
-      addItineraryItem({
-        title: wishlistItem.name,
-        description: wishlistItem.description,
-        date,
-        period,
-        travelId: wishlistItem.travelId,
-        createdBy: wishlistItem.addedBy,
-      });
+      createGroup: async (name: string) => {
+        try {
+          const newGroup = await travelGroupsApi.create(name);
+          set(state => ({
+            groups: [...state.groups, newGroup]
+          }));
+          return newGroup.id;
+        } catch (error) {
+          console.error('Failed to create group:', error);
+          throw error;
+        }
+      },
+      
+      addMemberToGroup: async (groupId: string, userId: string) => {
+        try {
+          await travelGroupsApi.addMember(groupId, userId);
+          // Refresh groups to get updated member list
+          get().fetchGroups();
+        } catch (error) {
+          console.error('Failed to add member:', error);
+          throw error;
+        }
+      },
+      
+      createTravel: async (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => {
+        try {
+          const newTravel = await travelsApi.create({
+            name,
+            destination,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            groupId,
+          });
+          set(state => ({
+            travels: [...state.travels, newTravel]
+          }));
+          return newTravel.id;
+        } catch (error) {
+          console.error('Failed to create travel:', error);
+          throw error;
+        }
+      },
+      
+      addItineraryItem: async (item) => {
+        try {
+          console.log('Attempting to create itinerary item:', item);
+          const newItem = await itineraryApi.create(item);
+          set(state => ({
+            itineraryItems: [...state.itineraryItems, newItem]
+          }));
+        } catch (error) {
+          console.error('Failed to add itinerary item:', error);
+          if (error.response) {
+            console.error('Error response:', error.response.data);
+            console.error('Error status:', error.response.status);
+          }
+          throw error;
+        }
+      },
+      
+      updateItineraryItem: async (id: string, updates) => {
+        try {
+          const updatedItem = await itineraryApi.update(id, updates);
+          set(state => ({
+            itineraryItems: state.itineraryItems.map(item =>
+              item.id === id ? updatedItem : item
+            )
+          }));
+        } catch (error) {
+          console.error('Failed to update itinerary item:', error);
+          throw error;
+        }
+      },
+      
+      deleteItineraryItem: async (id: string) => {
+        try {
+          await itineraryApi.delete(id);
+          set(state => ({
+            itineraryItems: state.itineraryItems.filter(item => item.id !== id)
+          }));
+        } catch (error) {
+          console.error('Failed to delete itinerary item:', error);
+          throw error;
+        }
+      },
+      
+      addWishlistItem: async (item) => {
+        try {
+          const newItem = await wishlistApi.create(item);
+          set(state => ({
+            wishlistItems: [...state.wishlistItems, newItem]
+          }));
+        } catch (error) {
+          console.error('Failed to add wishlist item:', error);
+          throw error;
+        }
+      },
+      
+      toggleWishlistShare: async (id: string) => {
+        try {
+          const updatedItem = await wishlistApi.toggleShare(id);
+          set(state => ({
+            wishlistItems: state.wishlistItems.map(item =>
+              item.id === id ? updatedItem : item
+            )
+          }));
+        } catch (error) {
+          console.error('Failed to toggle wishlist share:', error);
+          throw error;
+        }
+      },
+      
+      moveWishlistToItinerary: async (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => {
+        const { wishlistItems, addItineraryItem } = get();
+        const wishlistItem = wishlistItems.find(item => item.id === wishlistId);
+        
+        if (wishlistItem) {
+          try {
+            await addItineraryItem({
+              title: wishlistItem.name,
+              description: wishlistItem.description,
+              date,
+              period,
+              travelId: wishlistItem.travelId,
+            });
+          } catch (error) {
+            console.error('Failed to move wishlist item to itinerary:', error);
+            throw error;
+          }
+        }
+      },
+      
+      initializeWithMockData: () => {
+        const { groups, travels } = get();
+        // Only initialize if no data exists
+        if (groups.length === 0 && travels.length === 0) {
+          set({
+            groups: mockGroups,
+            travels: mockTravels,
+            itineraryItems: mockItineraryItems,
+            wishlistItems: mockWishlistItems,
+          });
+        }
+      },
+    }),
+    {
+      name: 'travel-storage',
+      storage: {
+        getItem: (name) => {
+          const str = localStorage.getItem(name);
+          if (!str) return null;
+          try {
+            const data = JSON.parse(str);
+            // Convert date strings back to Date objects safely
+            if (data.state.travels) {
+              data.state.travels = data.state.travels.map((travel: any) => ({
+                ...travel,
+                startDate: travel.startDate ? new Date(travel.startDate) : null,
+                endDate: travel.endDate ? new Date(travel.endDate) : null,
+                createdAt: travel.createdAt ? new Date(travel.createdAt) : null,
+              }));
+            }
+            if (data.state.groups) {
+              data.state.groups = data.state.groups.map((group: any) => ({
+                ...group,
+                createdAt: group.createdAt ? new Date(group.createdAt) : null,
+              }));
+            }
+            if (data.state.itineraryItems) {
+              data.state.itineraryItems = data.state.itineraryItems.map((item: any) => ({
+                ...item,
+                createdAt: item.createdAt ? new Date(item.createdAt) : null,
+                updatedAt: item.updatedAt ? new Date(item.updatedAt) : null,
+              }));
+            }
+            if (data.state.wishlistItems) {
+              data.state.wishlistItems = data.state.wishlistItems.map((item: any) => ({
+                ...item,
+                createdAt: item.createdAt ? new Date(item.createdAt) : null,
+              }));
+            }
+            return data;
+          } catch (error) {
+            console.error('Error parsing stored data:', error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          localStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+        },
+      },
     }
-  },
-  
-  initializeWithMockData: () => {
-    const { groups, travels } = get();
-    // Only initialize if no data exists
-    if (groups.length === 0 && travels.length === 0) {
-      set({
-        groups: mockGroups,
-        travels: mockTravels,
-        itineraryItems: mockItineraryItems,
-        wishlistItems: mockWishlistItems,
-        _hasHydrated: true,
-      });
-    }
-  },
-}),
-{
-  name: 'travel-storage',
-  storage: {
-    getItem: (name) => {
-      const str = localStorage.getItem(name);
-      if (!str) return null;
-      const data = JSON.parse(str);
-      // Convert date strings back to Date objects
-      if (data.state.travels) {
-        data.state.travels = data.state.travels.map((travel: any) => ({
-          ...travel,
-          startDate: new Date(travel.startDate),
-          endDate: new Date(travel.endDate),
-          createdAt: new Date(travel.createdAt),
-        }));
-      }
-      if (data.state.groups) {
-        data.state.groups = data.state.groups.map((group: any) => ({
-          ...group,
-          createdAt: new Date(group.createdAt),
-        }));
-      }
-      if (data.state.itineraryItems) {
-        data.state.itineraryItems = data.state.itineraryItems.map((item: any) => ({
-          ...item,
-          createdAt: new Date(item.createdAt),
-          updatedAt: new Date(item.updatedAt),
-        }));
-      }
-      if (data.state.wishlistItems) {
-        data.state.wishlistItems = data.state.wishlistItems.map((item: any) => ({
-          ...item,
-          createdAt: new Date(item.createdAt),
-        }));
-      }
-      return data;
-    },
-    setItem: (name, value) => {
-      localStorage.setItem(name, JSON.stringify(value));
-    },
-    removeItem: (name) => {
-      localStorage.removeItem(name);
-    },
-  },
-}
-)
+  )
 );

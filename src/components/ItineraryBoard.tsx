@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ItineraryItem } from '@/types';
+import { formatDate } from '@/utils/dateUtils';
 import { Plus, Edit2, Trash2, Clock, MapPin } from 'lucide-react';
 
 interface ItineraryBoardProps {
@@ -13,8 +14,13 @@ interface ItineraryBoardProps {
 }
 
 export default function ItineraryBoard({ travelId, startDate, endDate }: ItineraryBoardProps) {
-  const { itineraryItems, addItineraryItem, updateItineraryItem, deleteItineraryItem } = useTravelStore();
+  const { itineraryItems, addItineraryItem, updateItineraryItem, deleteItineraryItem, fetchItineraryItems } = useTravelStore();
   const { user } = useAuthStore();
+
+  // Fetch itinerary items for this travel
+  useEffect(() => {
+    fetchItineraryItems(travelId);
+  }, [travelId, fetchItineraryItems]);
   
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<{
@@ -64,13 +70,12 @@ export default function ItineraryBoard({ travelId, startDate, endDate }: Itinera
       date: newItem.date,
       period: newItem.period,
       travelId,
-      createdBy: user.id,
     });
 
     setNewItem(null);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDateHeader = (date: Date) => {
     return date.toLocaleDateString('ja-JP', {
       month: 'short',
       day: 'numeric',
@@ -86,7 +91,7 @@ export default function ItineraryBoard({ travelId, startDate, endDate }: Itinera
         {dates.map((date, dateIndex) => (
           <div key={dateIndex} className="bg-white rounded-2xl shadow-sm border">
             <div className="p-4 border-b bg-gray-50 rounded-t-2xl">
-              <h3 className="font-semibold text-gray-900">{formatDate(date)}</h3>
+              <h3 className="font-semibold text-gray-900">{formatDateHeader(date)}</h3>
             </div>
             
             <div className="p-4 space-y-4">

@@ -6,41 +6,58 @@ import { useTravelStore } from '@/stores/travelStore';
 import AuthForm from '@/components/AuthForm';
 import Layout from '@/components/Layout';
 import CreateGroupModal from '@/components/CreateGroupModal';
+import { formatDate } from '@/utils/dateUtils';
 import { Plus, Users, Calendar, MapPin } from 'lucide-react';
 
 export default function Home() {
-  const { user, isAuthenticated, setUser } = useAuthStore();
-  const { groups, travels, createTravel, initializeWithMockData } = useTravelStore();
-  
+  const { user, isAuthenticated, initializeAuth } = useAuthStore();
+  const { groups, travels, createTravel, fetchTravels, fetchGroups, isLoading } = useTravelStore();
+
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateTravel, setShowCreateTravel] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [mounted, setMounted] = useState(false);
 
-  // Initialize user from localStorage and mock data
+  // Initialize auth
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    initializeAuth();
+    setMounted(true);
+  }, [initializeAuth]);
+
+  // Fetch data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && mounted) {
+      fetchTravels();
+      fetchGroups();
     }
-    // Initialize mock data for development
-    initializeWithMockData();
-  }, [setUser, initializeWithMockData]);
+  }, [isAuthenticated, mounted, fetchTravels, fetchGroups]);
 
   if (!isAuthenticated) {
     return (
-      <AuthForm 
-        mode={authMode} 
-        onToggleMode={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} 
+      <AuthForm
+        mode={authMode}
+        onToggleMode={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
       />
     );
   }
 
-  const userGroups = groups.filter(group => 
+  if (!mounted || isLoading) {
+    return (
+      <Layout>
+        <div className="p-4 text-center">
+          <p className="text-gray-500">読み込み中...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+
+  const userGroups = groups.filter(group =>
     group.createdBy === user?.id || group.members.some(member => member.id === user?.id)
   );
 
-  const userTravels = travels.filter(travel => 
+  const userTravels = travels.filter(travel =>
     userGroups.some(group => group.id === travel.groupId)
   );
 
@@ -101,7 +118,7 @@ export default function Home() {
         {/* Travels Section */}
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4">旅行</h2>
-          
+
           {userTravels.length > 0 ? (
             <div className="space-y-3">
               {userTravels.map(travel => {
@@ -118,7 +135,7 @@ export default function Home() {
                         <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {travel.startDate.toLocaleDateString('ja-JP')} - {travel.endDate.toLocaleDateString('ja-JP')}
+                            {formatDate(travel.startDate)} - {formatDate(travel.endDate)}
                           </span>
                         </div>
                         {group && (
@@ -183,28 +200,32 @@ function CreateTravelModal({ groupId, onClose }: CreateTravelModalProps) {
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  
+
   const { createTravel } = useTravelStore();
   const { user } = useAuthStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !name.trim() || !destination.trim() || !startDate || !endDate) return;
 
-    createTravel(
-      name,
-      destination,
-      new Date(startDate),
-      new Date(endDate),
-      groupId,
-      user.id
-    );
+    try {
+      await createTravel(
+        name,
+        destination,
+        new Date(startDate),
+        new Date(endDate),
+        groupId
+      );
 
-    setName('');
-    setDestination('');
-    setStartDate('');
-    setEndDate('');
-    onClose();
+      setName('');
+      setDestination('');
+      setStartDate('');
+      setEndDate('');
+      onClose();
+    } catch (error) {
+      console.error('Failed to create travel:', error);
+      alert('旅行の作成に失敗しました。');
+    }
   };
 
   return (
