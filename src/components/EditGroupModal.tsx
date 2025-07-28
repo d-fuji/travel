@@ -232,7 +232,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
           )}
 
           <div className="flex gap-3 pt-4">
-            {isCreator ? (
+            {isCreator && (
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
@@ -241,15 +241,14 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
                 <Trash2 className="w-4 h-4" />
                 削除
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                キャンセル
-              </button>
             )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              キャンセル
+            </button>
             <button
               type="submit"
               disabled={!isCreator}
