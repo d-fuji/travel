@@ -6,6 +6,7 @@ import { useTravelStore } from '@/stores/travelStore';
 import AuthForm from '@/components/AuthForm';
 import Layout from '@/components/Layout';
 import CreateGroupModal from '@/components/CreateGroupModal';
+import EditGroupModal from '@/components/EditGroupModal';
 import { formatDate } from '@/utils/dateUtils';
 import { Plus, Users, Calendar, MapPin } from 'lucide-react';
 
@@ -16,7 +17,9 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateTravel, setShowCreateTravel] = useState(false);
+  const [showEditGroup, setShowEditGroup] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
   // Initialize auth
@@ -79,7 +82,14 @@ export default function Home() {
           {userGroups.length > 0 ? (
             <div className="space-y-3">
               {userGroups.map(group => (
-                <div key={group.id} className="bg-white p-4 rounded-2xl shadow-sm border">
+                <div
+                  key={group.id}
+                  className="bg-white p-4 rounded-2xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => {
+                    setSelectedGroup(group);
+                    setShowEditGroup(true);
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-gray-900">{group.name}</h3>
@@ -89,7 +99,8 @@ export default function Home() {
                       </div>
                     </div>
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedGroupId(group.id);
                         setShowCreateTravel(true);
                       }}
@@ -153,7 +164,7 @@ export default function Home() {
                         }}
                         className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100"
                       >
-                        開く
+                        詳細
                       </button>
                     </div>
                   </div>
@@ -184,6 +195,17 @@ export default function Home() {
             setShowCreateTravel(false);
             setSelectedGroupId('');
           }}
+        />
+      )}
+
+      {showEditGroup && (
+        <EditGroupModal
+          isOpen={showEditGroup}
+          onClose={() => {
+            setShowEditGroup(false);
+            setSelectedGroup(null);
+          }}
+          group={selectedGroup}
         />
       )}
     </Layout>

@@ -12,7 +12,7 @@ interface CreateGroupModalProps {
 
 export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState('');
-  const [memberEmails, setMemberEmails] = useState([''])
+  const [memberEmails, setMemberEmails] = useState<string[]>([])
   const { createGroup, addMemberToGroup } = useTravelStore();
   const { user } = useAuthStore();
 
@@ -23,6 +23,11 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
   };
 
   const handleMemberChange = (index: number, value: string) => {
+    // 作成者のメールアドレスが入力された場合は無視する
+    if (user && value.trim() === user.email) {
+      return;
+    }
+    
     const updated = [...memberEmails];
     updated[index] = value;
     setMemberEmails(updated);
@@ -34,15 +39,17 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
 
     const groupId = await createGroup(groupName);
 
-    // Add members
+    // Add members (excluding creator's email)
+    const validEmails = memberEmails
+      .filter(email => email.trim() && email.trim() !== user.email)
+      .map(email => email.trim());
+      
     await Promise.all(
-      memberEmails
-        .filter(email => email.trim())
-        .map(email => addMemberToGroup(groupId, email.trim()))
+      validEmails.map(email => addMemberToGroup(groupId, email))
     );
 
     setGroupName('');
-    setMemberEmails(['']);
+    setMemberEmails([]);
     onClose();
   };
 

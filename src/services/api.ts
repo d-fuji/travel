@@ -41,7 +41,7 @@ api.interceptors.response.use(
       statusText: error.response?.statusText,
       responseData: error.response?.data,
     });
-    
+
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
@@ -51,12 +51,12 @@ api.interceptors.response.use(
   }
 );
 
-// Helper function to convert date strings to Date objects
+// Helper function to convert date strings to Date objects and transform data structure
 function convertDates(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
-  
+
   const result = { ...obj };
-  
+
   // Convert common date fields
   ['startDate', 'endDate', 'createdAt', 'updatedAt'].forEach(field => {
     if (result[field] && typeof result[field] === 'string') {
@@ -67,10 +67,20 @@ function convertDates(obj: any): any {
       }
     }
   });
-  
+
+  // Transform travel group members structure
+  if (result.members && Array.isArray(result.members)) {
+    result.members = result.members.map((member: any) => {
+      if (member.user) {
+        return member.user;
+      }
+      return member;
+    });
+  }
+
   // Handle nested objects
   Object.keys(result).forEach(key => {
-    if (result[key] && typeof result[key] === 'object' && !['startDate', 'endDate', 'createdAt', 'updatedAt'].includes(key)) {
+    if (result[key] && typeof result[key] === 'object' && !['startDate', 'endDate', 'createdAt', 'updatedAt', 'members'].includes(key)) {
       if (Array.isArray(result[key])) {
         result[key] = result[key].map(convertDates);
       } else {
@@ -78,7 +88,7 @@ function convertDates(obj: any): any {
       }
     }
   });
-  
+
   return result;
 }
 
@@ -88,7 +98,7 @@ export const authApi = {
     const response = await api.post('/auth/login', { email, password });
     return response.data;
   },
-  
+
   register: async (email: string, password: string, name: string) => {
     const response = await api.post('/auth/register', { email, password, name });
     return response.data;
@@ -101,7 +111,7 @@ export const usersApi = {
     const response = await api.get(`/users/${id}`);
     return response.data;
   },
-  
+
   updateProfile: async (id: string, data: Partial<User>): Promise<User> => {
     const response = await api.patch(`/users/${id}`, data);
     return response.data;
@@ -114,32 +124,32 @@ export const travelGroupsApi = {
     const response = await api.get('/travel-groups');
     return response.data;
   },
-  
+
   getOne: async (id: string): Promise<TravelGroup> => {
     const response = await api.get(`/travel-groups/${id}`);
     return response.data;
   },
-  
+
   create: async (name: string): Promise<TravelGroup> => {
     const response = await api.post('/travel-groups', { name });
     return response.data;
   },
-  
-  addMember: async (groupId: string, userId: string) => {
-    const response = await api.post(`/travel-groups/${groupId}/members`, { userId });
+
+  addMember: async (groupId: string, email: string) => {
+    const response = await api.post(`/travel-groups/${groupId}/members`, { email });
     return response.data;
   },
-  
+
   removeMember: async (groupId: string, userId: string) => {
     const response = await api.delete(`/travel-groups/${groupId}/members/${userId}`);
     return response.data;
   },
-  
+
   update: async (id: string, data: Partial<TravelGroup>): Promise<TravelGroup> => {
     const response = await api.patch(`/travel-groups/${id}`, data);
     return response.data;
   },
-  
+
   delete: async (id: string) => {
     const response = await api.delete(`/travel-groups/${id}`);
     return response.data;
@@ -152,12 +162,12 @@ export const travelsApi = {
     const response = await api.get('/travels');
     return response.data;
   },
-  
+
   getOne: async (id: string): Promise<Travel> => {
     const response = await api.get(`/travels/${id}`);
     return response.data;
   },
-  
+
   create: async (data: {
     name: string;
     destination: string;
@@ -168,12 +178,12 @@ export const travelsApi = {
     const response = await api.post('/travels', data);
     return response.data;
   },
-  
+
   update: async (id: string, data: Partial<Travel>): Promise<Travel> => {
     const response = await api.patch(`/travels/${id}`, data);
     return response.data;
   },
-  
+
   delete: async (id: string) => {
     const response = await api.delete(`/travels/${id}`);
     return response.data;
@@ -186,7 +196,7 @@ export const itineraryApi = {
     const response = await api.get(`/itinerary?travelId=${travelId}`);
     return response.data;
   },
-  
+
   create: async (data: {
     title: string;
     description?: string;
@@ -200,12 +210,12 @@ export const itineraryApi = {
     const response = await api.post('/itinerary', data);
     return response.data;
   },
-  
+
   update: async (id: string, data: Partial<ItineraryItem>): Promise<ItineraryItem> => {
     const response = await api.patch(`/itinerary/${id}`, data);
     return response.data;
   },
-  
+
   delete: async (id: string) => {
     const response = await api.delete(`/itinerary/${id}`);
     return response.data;
@@ -218,7 +228,7 @@ export const wishlistApi = {
     const response = await api.get(`/wishlist?travelId=${travelId}`);
     return response.data;
   },
-  
+
   create: async (data: {
     name: string;
     description?: string;
@@ -228,17 +238,17 @@ export const wishlistApi = {
     const response = await api.post('/wishlist', data);
     return response.data;
   },
-  
+
   update: async (id: string, data: Partial<WishlistItem>): Promise<WishlistItem> => {
     const response = await api.patch(`/wishlist/${id}`, data);
     return response.data;
   },
-  
+
   toggleShare: async (id: string): Promise<WishlistItem> => {
     const response = await api.patch(`/wishlist/${id}/toggle-share`);
     return response.data;
   },
-  
+
   delete: async (id: string) => {
     const response = await api.delete(`/wishlist/${id}`);
     return response.data;

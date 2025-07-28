@@ -7,7 +7,8 @@ import Layout from '@/components/Layout';
 import ItineraryBoard from '@/components/ItineraryBoard';
 import WishlistPanel from '@/components/WishlistPanel';
 import { formatDate, parseDate } from '@/utils/dateUtils';
-import { Calendar, Heart, ArrowLeft } from 'lucide-react';
+import { Calendar, Heart, ArrowLeft, Settings } from 'lucide-react';
+import EditTravelModal from '@/components/EditTravelModal';
 
 export default function TravelDetailPage({ params }: { params: { id: string } }) {
   const { user, isAuthenticated, setUser, initializeAuth } = useAuthStore();
@@ -15,6 +16,7 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
   
   const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist'>('itinerary');
   const [mounted, setMounted] = useState(false);
+  const [isEditTravelModalOpen, setIsEditTravelModalOpen] = useState(false);
 
   // Initialize auth and data
   useEffect(() => {
@@ -86,13 +88,23 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-gray-900">{travel.name}</h1>
-              <p className="text-sm text-gray-500">
-                {travel.destination} • {formatDate(travel.startDate)} - {formatDate(travel.endDate)}
-              </p>
-              {group && (
-                <p className="text-sm text-gray-500">{group.name}</p>
-              )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">{travel.name}</h1>
+                  <p className="text-sm text-gray-500">
+                    {travel.destination} • {formatDate(travel.startDate)} - {formatDate(travel.endDate)}
+                  </p>
+                  {group && (
+                    <p className="text-sm text-gray-500">{group.name}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsEditTravelModalOpen(true)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -132,6 +144,13 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
             <WishlistPanel travelId={travel.id} />
           )}
         </div>
+
+        {/* Edit Travel Modal */}
+        <EditTravelModal
+          isOpen={isEditTravelModalOpen}
+          onClose={() => setIsEditTravelModalOpen(false)}
+          travel={travel || null}
+        />
       </div>
     </Layout>
   );

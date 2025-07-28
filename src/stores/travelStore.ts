@@ -18,10 +18,15 @@ interface TravelState {
 
   // Travel Group actions
   createGroup: (name: string) => Promise<string>;
-  addMemberToGroup: (groupId: string, userId: string) => Promise<void>;
+  updateGroup: (groupId: string, updates: Partial<TravelGroup>) => Promise<void>;
+  deleteGroup: (groupId: string) => Promise<void>;
+  addMemberToGroup: (groupId: string, email: string) => Promise<void>;
+  removeMemberFromGroup: (groupId: string, userId: string) => Promise<void>;
 
   // Travel actions
   createTravel: (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => Promise<string>;
+  updateTravel: (travelId: string, updates: Partial<Travel>) => Promise<void>;
+  deleteTravel: (travelId: string) => Promise<void>;
 
   // Itinerary actions
   addItineraryItem: (item: {
@@ -189,13 +194,50 @@ export const useTravelStore = create<TravelState>()(
         }
       },
 
-      addMemberToGroup: async (groupId: string, userId: string) => {
+      updateGroup: async (groupId: string, updates: Partial<TravelGroup>) => {
         try {
-          await travelGroupsApi.addMember(groupId, userId);
+          await travelGroupsApi.update(groupId, updates);
+          set(state => ({
+            groups: state.groups.map(group =>
+              group.id === groupId ? { ...group, ...updates } : group
+            )
+          }));
+        } catch (error) {
+          console.error('Failed to update group:', error);
+          throw error;
+        }
+      },
+
+      deleteGroup: async (groupId: string) => {
+        try {
+          await travelGroupsApi.delete(groupId);
+          set(state => ({
+            groups: state.groups.filter(group => group.id !== groupId)
+          }));
+        } catch (error) {
+          console.error('Failed to delete group:', error);
+          throw error;
+        }
+      },
+
+      addMemberToGroup: async (groupId: string, email: string) => {
+        try {
+          await travelGroupsApi.addMember(groupId, email);
           // Refresh groups to get updated member list
           get().fetchGroups();
         } catch (error) {
           console.error('Failed to add member:', error);
+          throw error;
+        }
+      },
+
+      removeMemberFromGroup: async (groupId: string, userId: string) => {
+        try {
+          await travelGroupsApi.removeMember(groupId, userId);
+          // Refresh groups to get updated member list
+          get().fetchGroups();
+        } catch (error) {
+          console.error('Failed to remove member:', error);
           throw error;
         }
       },
@@ -215,6 +257,32 @@ export const useTravelStore = create<TravelState>()(
           return newTravel.id;
         } catch (error) {
           console.error('Failed to create travel:', error);
+          throw error;
+        }
+      },
+
+      updateTravel: async (travelId: string, updates: Partial<Travel>) => {
+        try {
+          const updatedTravel = await travelsApi.update(travelId, updates);
+          set(state => ({
+            travels: state.travels.map(travel =>
+              travel.id === travelId ? updatedTravel : travel
+            )
+          }));
+        } catch (error) {
+          console.error('Failed to update travel:', error);
+          throw error;
+        }
+      },
+
+      deleteTravel: async (travelId: string) => {
+        try {
+          await travelsApi.delete(travelId);
+          set(state => ({
+            travels: state.travels.filter(travel => travel.id !== travelId)
+          }));
+        } catch (error) {
+          console.error('Failed to delete travel:', error);
           throw error;
         }
       },
