@@ -5,6 +5,9 @@ import {
   Travel,
   ItineraryItem,
   WishlistItem,
+  Expense,
+  ExpenseCategory,
+  Budget,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -19,8 +22,17 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
+  console.log('API Request Debug:', {
+    url: config.url,
+    method: config.method,
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token'
+  });
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    console.warn('No JWT token found in localStorage for API request:', config.url);
   }
   return config;
 });
@@ -47,6 +59,17 @@ api.interceptors.response.use(
       statusText: error.response?.statusText,
       responseData: error.response?.data,
     });
+
+    // Special handling for 403 errors to provide more context
+    if (error.response?.status === 403) {
+      console.error('Permission denied. Check if user has access to this resource.');
+      console.error('Request details:', {
+        endpoint: error.config?.url,
+        method: error.config?.method,
+        userData: error.config?.data,
+        authToken: error.config?.headers?.Authorization ? 'Present' : 'Missing'
+      });
+    }
 
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
@@ -282,6 +305,72 @@ export const wishlistApi = {
 
   delete: async (id: string) => {
     const response = await api.delete(`/wishlist/${id}`);
+    return response.data;
+  },
+};
+
+// Expense Categories API
+export const expenseCategoriesApi = {
+  getAll: async (): Promise<ExpenseCategory[]> => {
+    const response = await api.get('/expense-categories');
+    return response.data;
+  },
+};
+
+// Expenses API
+export const expensesApi = {
+  getByTravel: async (travelId: string): Promise<Expense[]> => {
+    const response = await api.get(`/expenses?travelId=${travelId}`);
+    return response.data;
+  },
+
+  create: async (travelId: string, data: {
+    amount: number;
+    title: string;
+    categoryId: string;
+    paidBy: string;
+    splitBetween: string[];
+    splitMethod: 'equal' | 'custom';
+    customSplits?: { userId: string; amount: number }[];
+    date: string;
+    memo?: string;
+    itineraryItemId?: string;
+  }): Promise<Expense> => {
+    const response = await api.post(`/travels/${travelId}/expenses`, data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<Expense>): Promise<Expense> => {
+    const response = await api.patch(`/expenses/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string) => {
+    const response = await api.delete(`/expenses/${id}`);
+    return response.data;
+  },
+};
+
+// Budgets API
+export const budgetsApi = {
+  getByTravel: async (travelId: string): Promise<Budget | null> => {
+    const response = await api.get(`/budgets?travelId=${travelId}`);
+    return response.data;
+  },
+
+  createOrUpdate: async (travelId: string, data: {
+    totalBudget?: number;
+    categoryBudgets?: { categoryId: string; amount: number }[];
+  }): Promise<Budget> => {
+    const response = await api.post(`/travels/${travelId}/budgets`, data);
+    return response.data;
+  },
+};
+
+// Expense Analytics API
+export const expenseAnalyticsApi = {
+  getByTravel: async (travelId: string) => {
+    const response = await api.get(`/travels/${travelId}/expense-analytics`);
     return response.data;
   },
 };

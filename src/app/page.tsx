@@ -12,7 +12,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { Plus, Users, Calendar, MapPin } from 'lucide-react';
 
 export default function Home() {
-  const { user, initializeAuth } = useAuthStore();
+  const { user } = useAuthStore();
   const { isAuthenticated } = useAuthGuard();
   const { groups, travels, fetchTravels, fetchGroups, isLoading } =
     useTravelStore();
@@ -25,11 +25,10 @@ export default function Home() {
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Initialize auth
+  // Initialize on mount
   useEffect(() => {
-    initializeAuth();
     setMounted(true);
-  }, [initializeAuth]);
+  }, []);
 
   // Fetch data when authenticated
   useEffect(() => {
@@ -118,7 +117,7 @@ export default function Home() {
                       </h3>
                       <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                         <Users className="w-4 h-4" />
-                        <span>{group.createdBy === user?.id ? group.members.length + 1 : group.members.length + 1}人</span>
+                        <span>{group.createdBy === user?.id ? group.members.length : group.members.length + 1}人</span>
                       </div>
                     </div>
                     <button

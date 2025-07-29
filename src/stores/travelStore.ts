@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Travel, TravelGroup, ItineraryItem, WishlistItem } from '@/types';
+import { Travel, TravelGroup, ItineraryItem, WishlistItem, Expense, ExpenseCategory, Budget } from '@/types';
 import {
   travelGroupsApi,
   travelsApi,
   itineraryApi,
   wishlistApi,
+  expensesApi,
+  expenseCategoriesApi,
+  budgetsApi,
 } from '@/services/api';
 
 interface TravelState {
@@ -13,6 +16,9 @@ interface TravelState {
   travels: Travel[];
   itineraryItems: ItineraryItem[];
   wishlistItems: WishlistItem[];
+  expenses: Expense[];
+  categories: ExpenseCategory[];
+  budgets: Budget[];
   isLoading: boolean;
 
   // Data fetching
@@ -20,6 +26,8 @@ interface TravelState {
   fetchTravels: () => Promise<void>;
   fetchItineraryItems: (travelId: string) => Promise<void>;
   fetchWishlistItems: (travelId: string) => Promise<void>;
+  fetchExpenses: (travelId: string) => Promise<void>;
+  fetchCategories: () => Promise<void>;
 
   // Travel Group actions
   createGroup: (name: string) => Promise<string>;
@@ -72,6 +80,23 @@ interface TravelState {
     date: string,
     period: 'morning' | 'afternoon' | 'evening'
   ) => Promise<void>;
+
+  // Expense actions
+  addExpense: (expense: {
+    amount: number;
+    title: string;
+    categoryId: string;
+    paidBy: string;
+    splitBetween: string[];
+    splitMethod: 'equal' | 'custom';
+    customSplits?: { userId: string; amount: number }[];
+    date: Date;
+    memo?: string;
+    itineraryItemId?: string;
+    travelId: string;
+  }) => Promise<void>;
+  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
 
   // Legacy mock data for development
   initializeWithMockData: () => void;
@@ -152,6 +177,48 @@ const mockWishlistItems: WishlistItem[] = [
   },
 ];
 
+// Default expense categories
+const defaultCategories: ExpenseCategory[] = [
+  { id: 'transport', name: '交通費', color: '#3B82F6', icon: '🚗' },
+  { id: 'accommodation', name: '宿泊費', color: '#10B981', icon: '🏨' },
+  { id: 'food', name: '食事', color: '#F59E0B', icon: '🍽️' },
+  { id: 'entertainment', name: '観光・娯楽', color: '#EF4444', icon: '🎡' },
+  { id: 'shopping', name: '買い物', color: '#8B5CF6', icon: '🛍️' },
+  { id: 'other', name: 'その他', color: '#6B7280', icon: '📝' },
+];
+
+const mockExpenses: Expense[] = [
+  {
+    id: 'expense-1',
+    travelId: 'travel-1',
+    amount: 15000,
+    title: '那覇空港からホテル',
+    category: defaultCategories[0],
+    paidBy: '1',
+    splitBetween: ['1', 'user-2', 'user-3'],
+    splitMethod: 'equal',
+    date: new Date('2024-03-20'),
+    memo: 'タクシー代',
+    createdBy: '1',
+    createdAt: new Date('2024-03-20'),
+    updatedAt: new Date('2024-03-20'),
+  },
+  {
+    id: 'expense-2',
+    travelId: 'travel-1',
+    amount: 45000,
+    title: 'ホテル宿泊費',
+    category: defaultCategories[1],
+    paidBy: 'user-2',
+    splitBetween: ['1', 'user-2', 'user-3'],
+    splitMethod: 'equal',
+    date: new Date('2024-03-20'),
+    createdBy: 'user-2',
+    createdAt: new Date('2024-03-20'),
+    updatedAt: new Date('2024-03-20'),
+  },
+];
+
 export const useTravelStore = create<TravelState>()(
   persist(
     (set, get) => ({
@@ -159,6 +226,9 @@ export const useTravelStore = create<TravelState>()(
       travels: [],
       itineraryItems: [],
       wishlistItems: [],
+      expenses: [],
+      categories: defaultCategories,
+      budgets: [],
       isLoading: false,
 
       // Data fetching
@@ -200,6 +270,26 @@ export const useTravelStore = create<TravelState>()(
         } catch (error) {
           // Set empty array on error to clear stale data
           set({ wishlistItems: [] });
+        }
+      },
+
+      fetchExpenses: async (travelId: string) => {
+        try {
+          const expenses = await expensesApi.getByTravel(travelId);
+          set({ expenses });
+        } catch (error) {
+          console.error('Failed to fetch expenses:', error);
+          set({ expenses: [] });
+        }
+      },
+
+      fetchCategories: async () => {
+        try {
+          const categories = await expenseCategoriesApi.getAll();
+          set({ categories });
+        } catch (error) {
+          console.error('Failed to fetch categories:', error);
+          set({ categories: defaultCategories });
         }
       },
 
@@ -317,22 +407,12 @@ export const useTravelStore = create<TravelState>()(
 
       addItineraryItem: async (item) => {
         try {
-          console.log('Attempting to create itinerary item:', item);
           const newItem = await itineraryApi.create(item);
           set((state) => ({
             itineraryItems: [...state.itineraryItems, newItem],
           }));
         } catch (error) {
           console.error('Failed to add itinerary item:', error);
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'response' in error
-          ) {
-            const err = error as { response: { data: any; status: any } };
-            console.error('Error response:', err.response.data);
-            console.error('Error status:', err.response.status);
-          }
           throw error;
         }
       },
@@ -416,6 +496,63 @@ export const useTravelStore = create<TravelState>()(
         }
       },
 
+      addExpense: async (expense) => {
+        try {
+          const newExpense = await expensesApi.create(expense.travelId, {
+            amount: expense.amount,
+            title: expense.title,
+            categoryId: expense.categoryId,
+            paidBy: expense.paidBy,
+            splitBetween: expense.splitBetween,
+            splitMethod: expense.splitMethod,
+            customSplits: expense.customSplits,
+            date: expense.date.toISOString(),
+            memo: expense.memo,
+            itineraryItemId: expense.itineraryItemId,
+          });
+
+          set((state) => ({
+            expenses: [...state.expenses, newExpense],
+          }));
+        } catch (error) {
+          console.error('Failed to add expense:', error);
+          throw error;
+        }
+      },
+
+      updateExpense: async (id: string, updates: Partial<Expense>) => {
+        try {
+          const updateData: any = { ...updates };
+          if (updateData.date) {
+            updateData.date = updateData.date.toISOString();
+          }
+          
+          const updatedExpense = await expensesApi.update(id, updateData);
+          
+          set((state) => ({
+            expenses: state.expenses.map((expense) =>
+              expense.id === id ? updatedExpense : expense
+            ),
+          }));
+        } catch (error) {
+          console.error('Failed to update expense:', error);
+          throw error;
+        }
+      },
+
+      deleteExpense: async (id: string) => {
+        try {
+          await expensesApi.delete(id);
+          
+          set((state) => ({
+            expenses: state.expenses.filter((expense) => expense.id !== id),
+          }));
+        } catch (error) {
+          console.error('Failed to delete expense:', error);
+          throw error;
+        }
+      },
+
       initializeWithMockData: () => {
         const { groups, travels } = get();
         // Only initialize if no data exists
@@ -425,6 +562,7 @@ export const useTravelStore = create<TravelState>()(
             travels: mockTravels,
             itineraryItems: mockItineraryItems,
             wishlistItems: mockWishlistItems,
+            expenses: mockExpenses,
           });
         }
       },
@@ -466,6 +604,16 @@ export const useTravelStore = create<TravelState>()(
                 (item: any) => ({
                   ...item,
                   createdAt: item.createdAt ? new Date(item.createdAt) : null,
+                })
+              );
+            }
+            if (data.state.expenses) {
+              data.state.expenses = data.state.expenses.map(
+                (expense: any) => ({
+                  ...expense,
+                  date: expense.date ? new Date(expense.date) : null,
+                  createdAt: expense.createdAt ? new Date(expense.createdAt) : null,
+                  updatedAt: expense.updatedAt ? new Date(expense.updatedAt) : null,
                 })
               );
             }

@@ -11,8 +11,6 @@ interface AuthState {
   register: (_email: string, _password: string, _name: string) => Promise<void>;
   logout: () => void;
   setUser: (_user: User) => void;
-  initializeAuth: () => void;
-  checkAuthStatus: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -28,9 +26,11 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.login(email, password);
           const { user, access_token } = response;
 
+
           localStorage.setItem('access_token', access_token);
           set({ user, isAuthenticated: true, isLoading: false });
         } catch (error) {
+          console.error('Login failed:', error);
           set({ isLoading: false });
           throw error;
         }
@@ -42,9 +42,11 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.register(email, password, name);
           const { user, access_token } = response;
 
+
           localStorage.setItem('access_token', access_token);
           set({ user, isAuthenticated: true, isLoading: false });
         } catch (error) {
+          console.error('Registration failed:', error);
           set({ isLoading: false });
           throw error;
         }
@@ -58,31 +60,16 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user: User) => {
         set({ user, isAuthenticated: true });
       },
-
-      initializeAuth: () => {
-        const token = localStorage.getItem('access_token');
-        const { user } = get();
-        if (token && user) {
-          set({ isAuthenticated: true });
-        } else {
-          set({ isAuthenticated: false, user: null });
-        }
-      },
-
-      checkAuthStatus: () => {
-        const token = localStorage.getItem('access_token');
-        const { user, isAuthenticated } = get();
-
-        // If we think we're authenticated but missing token or user, logout
-        if (isAuthenticated && (!token || !user)) {
-          get().logout();
-          window.location.href = '/';
-        }
-      },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user }),
+      onRehydrateStorage: () => (state) => {
+        // Sync isAuthenticated with token and user presence
+        if (state) {
+          const token = localStorage.getItem('access_token');
+          state.isAuthenticated = !!(token && state.user?.id);
+        }
+      },
     }
   )
 );

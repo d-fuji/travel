@@ -49,3 +49,38 @@ export interface WishlistItem {
   isShared: boolean;
   createdAt: Date;
 }
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface Expense {
+  id: string;
+  travelId: string;
+  amount: number;
+  title: string;
+  category: ExpenseCategory;
+  paidBy: string;
+  splitBetween: string[];
+  splitMethod: 'equal' | 'custom';
+  customSplits?: { userId: string; amount: number }[];
+  date: Date;
+  memo?: string;
+  receiptImage?: string;
+  itineraryItemId?: string; // 関連する旅程表アイテムのID
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Budget {
+  id: string;
+  travelId: string;
+  totalBudget?: number;
+  categoryBudgets: { categoryId: string; amount: number }[];
+  createdAt: Date;
+  updatedAt: Date;
+}

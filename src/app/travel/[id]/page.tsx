@@ -7,8 +7,9 @@ import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Layout from '@/components/Layout';
 import ItineraryBoard from '@/components/ItineraryBoard';
 import WishlistPanel from '@/components/WishlistPanel';
+import ExpenseTracker from '@/components/ExpenseTracker';
 import { formatDate, parseDate } from '@/utils/dateUtils';
-import { Calendar, Heart, ArrowLeft, Settings } from 'lucide-react';
+import { Calendar, Heart, ArrowLeft, Settings, Wallet } from 'lucide-react';
 import EditTravelModal from '@/components/EditTravelModal';
 
 export default function TravelDetailPage({
@@ -16,22 +17,20 @@ export default function TravelDetailPage({
 }: {
   params: { id: string };
 }) {
-  const { initializeAuth } = useAuthStore();
   const { isAuthenticated } = useAuthGuard();
   const { travels, groups, fetchTravels, fetchGroups, isLoading } =
     useTravelStore();
 
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist'>(
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist' | 'expenses'>(
     'itinerary'
   );
   const [mounted, setMounted] = useState(false);
   const [isEditTravelModalOpen, setIsEditTravelModalOpen] = useState(false);
 
-  // Initialize auth and data
+  // Initialize on mount
   useEffect(() => {
-    initializeAuth();
     setMounted(true);
-  }, [initializeAuth]);
+  }, []);
 
   // Fetch data when authenticated
   useEffect(() => {
@@ -70,6 +69,7 @@ export default function TravelDetailPage({
 
   const travel = travels.find((t) => t.id === params.id);
 
+
   if (!mounted || isLoading) {
     return (
       <Layout>
@@ -89,7 +89,12 @@ export default function TravelDetailPage({
           <p className="text-sm text-gray-400">
             Available travels: {travels.length}
           </p>
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
+            {travels.map(t => (
+              <div key={t.id} className="text-xs text-gray-400">
+                ID: {t.id} - {t.name}
+              </div>
+            ))}
             <button
               onClick={() => window.history.back()}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -107,6 +112,7 @@ export default function TravelDetailPage({
   const tabs = [
     { key: 'itinerary' as const, label: '旅程表', icon: Calendar },
     { key: 'wishlist' as const, label: '行きたい場所', icon: Heart },
+    { key: 'expenses' as const, label: '費用', icon: Wallet },
   ];
 
   return (
@@ -178,6 +184,8 @@ export default function TravelDetailPage({
           )}
 
           {activeTab === 'wishlist' && <WishlistPanel travelId={travel.id} />}
+
+          {activeTab === 'expenses' && <ExpenseTracker travelId={travel.id} />}
         </div>
 
         {/* Edit Travel Modal */}

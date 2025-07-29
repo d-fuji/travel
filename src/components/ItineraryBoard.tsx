@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ItineraryItem } from '@/types';
-import { Plus, Edit2, Trash2, Clock, MapPin } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, MapPin, Wallet } from 'lucide-react';
 
 interface ItineraryBoardProps {
   travelId: string;
@@ -36,6 +36,7 @@ export default function ItineraryBoard({
     date: string;
     period: 'morning' | 'afternoon' | 'evening';
   } | null>(null);
+  const [expenseModalItem, setExpenseModalItem] = useState<ItineraryItem | null>(null);
 
   // Generate date range
   const dates = [];
@@ -62,7 +63,7 @@ export default function ItineraryBoard({
         item.date === dateStr &&
         item.period === period
     );
-    
+
     // Sort by start time, putting items without start time at the end
     return filteredItems.sort((a, b) => {
       if (!a.startTime && !b.startTime) return 0;
@@ -160,6 +161,7 @@ export default function ItineraryBoard({
                           }}
                           onCancel={() => setEditingItem(null)}
                           onDelete={() => deleteItineraryItem(item.id)}
+                          onAddExpense={(item) => setExpenseModalItem(item)}
                         />
                       ))}
 
@@ -181,6 +183,14 @@ export default function ItineraryBoard({
           onCancel={() => setNewItem(null)}
         />
       )}
+
+      {expenseModalItem && (
+        <AddExpenseFromItineraryModal
+          itineraryItem={expenseModalItem}
+          travelId={travelId}
+          onClose={() => setExpenseModalItem(null)}
+        />
+      )}
     </div>
   );
 }
@@ -192,6 +202,7 @@ interface ItineraryItemCardProps {
   onSave: (_updates: Partial<ItineraryItem>) => void;
   onCancel: () => void;
   onDelete: () => void;
+  onAddExpense?: (item: ItineraryItem) => void;
 }
 
 function ItineraryItemCard({
@@ -201,6 +212,7 @@ function ItineraryItemCard({
   onSave,
   onCancel,
   onDelete,
+  onAddExpense,
 }: ItineraryItemCardProps) {
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description || '');
@@ -295,6 +307,15 @@ function ItineraryItemCard({
           </div>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onAddExpense && (
+            <button
+              onClick={() => onAddExpense(item)}
+              className="p-1 text-gray-500 hover:text-green-600"
+              title="費用を記録"
+            >
+              <Wallet className="w-3 h-3" />
+            </button>
+          )}
           <button
             onClick={onEdit}
             className="p-1 text-gray-500 hover:text-primary-600"
@@ -407,6 +428,233 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
               className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
               追加
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface AddExpenseFromItineraryModalProps {
+  itineraryItem: ItineraryItem;
+  travelId: string;
+  onClose: () => void;
+}
+
+function AddExpenseFromItineraryModal({
+  itineraryItem,
+  travelId,
+  onClose,
+}: AddExpenseFromItineraryModalProps) {
+  const { user } = useAuthStore();
+  const { categories, addExpense, groups, travels } = useTravelStore();
+
+  const travel = travels.find(t => t.id === travelId);
+  const group = groups.find(g => g.id === travel?.groupId);
+  const groupMembers = group 
+    ? group.members.some(member => member.id === group.createdBy)
+      ? group.members
+      : [...group.members, { id: group.createdBy, name: 'オーナー', email: '' }]
+    : [];
+
+  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [paidBy, setPaidBy] = useState(user?.id || '');
+  const [splitBetween, setSplitBetween] = useState<string[]>(
+    groupMembers.map(member => member.id)
+  );
+  const [memo, setMemo] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || !categoryId || !paidBy || splitBetween.length === 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addExpense({
+        amount: parseFloat(amount),
+        title: itineraryItem.title,
+        categoryId,
+        paidBy,
+        splitBetween,
+        splitMethod: 'equal',
+        date: new Date(itineraryItem.date),
+        memo: memo || itineraryItem.description || undefined,
+        itineraryItemId: itineraryItem.id,
+        travelId,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error('Failed to add expense:', error);
+      
+      let errorMessage = '支出の追加に失敗しました。';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const apiError = error as { response: { data?: any; status?: number } };
+        
+        if (apiError.response?.status === 401) {
+          errorMessage = '認証が無効です。再度ログインしてください。';
+        } else if (apiError.response?.status === 403) {
+          errorMessage = 'この操作を実行する権限がありません。';
+        } else if (apiError.response?.status === 400) {
+          const validationErrors = apiError.response.data?.message;
+          if (Array.isArray(validationErrors)) {
+            errorMessage = `入力エラー: ${validationErrors.join(', ')}`;
+          } else if (typeof validationErrors === 'string') {
+            errorMessage = `入力エラー: ${validationErrors}`;
+          } else {
+            errorMessage = '入力内容に問題があります。各項目を確認してください。';
+          }
+        } else if (apiError.response?.data?.message) {
+          errorMessage = `エラー: ${apiError.response.data.message}`;
+        }
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = `エラー: ${(error as Error).message}`;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSplitBetweenChange = (memberId: string, checked: boolean) => {
+    if (checked) {
+      setSplitBetween([...splitBetween, memberId]);
+    } else {
+      setSplitBetween(splitBetween.filter(id => id !== memberId));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">
+          「{itineraryItem.title}」の費用を記録
+        </h3>
+
+        {itineraryItem.location && (
+          <p className="text-sm text-gray-600 mb-4">
+            <MapPin className="w-4 h-4 inline mr-1" />
+            {itineraryItem.location}
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              金額 *
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                ¥
+              </span>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="10000"
+                required
+                min="0"
+                step="1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              カテゴリ *
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+            >
+              <option value="">カテゴリを選択</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.icon} {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              支払者 *
+            </label>
+            <select
+              value={paidBy}
+              onChange={(e) => setPaidBy(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+            >
+              {groupMembers.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              分担対象者 *
+            </label>
+            <div className="space-y-2">
+              {groupMembers.map((member) => (
+                <label key={member.id} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={splitBetween.includes(member.id)}
+                    onChange={(e) => handleSplitBetweenChange(member.id, e.target.checked)}
+                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">{member.name}</span>
+                </label>
+              ))}
+            </div>
+            {splitBetween.length > 0 && (
+              <p className="mt-2 text-xs text-gray-500">
+                一人あたり: ¥{amount ? Math.round(parseFloat(amount) / splitBetween.length).toLocaleString() : '0'}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              メモ
+            </label>
+            <textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="詳細や備考を入力"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || splitBetween.length === 0}
+              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? '追加中...' : '追加'}
             </button>
           </div>
         </form>
