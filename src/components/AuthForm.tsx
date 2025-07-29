@@ -13,12 +13,20 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   
   const { login, register } = useAuthStore();
+
+  const handleInputChange = () => {
+    if (error) {
+      setError('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
     try {
       if (mode === 'login') {
@@ -26,8 +34,44 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
       } else {
         await register(email, password, name);
       }
-    } catch (error) {
+      
+      // Force page reload to ensure proper state update
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error: any) {
       console.error('Auth error:', error);
+      
+      // Extract error message from API response
+      let errorMessage = mode === 'login' ? 'ログインに失敗しました' : 'アカウント作成に失敗しました';
+      if (error.response?.data?.message) {
+        const apiMessage = error.response.data.message;
+        if (apiMessage.includes('Invalid credentials') || apiMessage.includes('Unauthorized')) {
+          errorMessage = 'メールアドレスまたはパスワードが正しくありません';
+        } else if (apiMessage.includes('User not found')) {
+          errorMessage = 'このメールアドレスのアカウントが見つかりません';
+        } else if (apiMessage.includes('Password')) {
+          errorMessage = 'パスワードが正しくありません';
+        } else if (apiMessage.includes('Email') && apiMessage.includes('already')) {
+          errorMessage = 'このメールアドレスは既に登録されています';
+        } else if (apiMessage.includes('validation') || apiMessage.includes('invalid')) {
+          errorMessage = '入力内容に誤りがあります';
+        } else if (apiMessage.includes('network') || apiMessage.includes('connection')) {
+          errorMessage = 'ネットワークエラーが発生しました';
+        } else {
+          errorMessage = mode === 'login' ? 'ログインに失敗しました' : 'アカウント作成に失敗しました';
+        }
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'ネットワークに接続できません';
+      } else if (error.message) {
+        if (error.message.includes('Network Error')) {
+          errorMessage = 'ネットワークエラーが発生しました';
+        } else {
+          errorMessage = mode === 'login' ? 'ログインに失敗しました' : 'アカウント作成に失敗しました';
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -55,7 +99,10 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    handleInputChange();
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="山田太郎"
                   required
@@ -70,7 +117,10 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  handleInputChange();
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="example@email.com"
                 required
@@ -84,12 +134,26 @@ export default function AuthForm({ mode, onToggleMode }: AuthFormProps) {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  handleInputChange();
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="••••••••"
                 required
               />
             </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {error}
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"

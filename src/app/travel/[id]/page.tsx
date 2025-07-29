@@ -33,7 +33,13 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
   }, [isAuthenticated, mounted, fetchTravels, fetchGroups]);
 
   if (!isAuthenticated) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">読み込み中...</p>
+        </div>
+      </div>
+    );
   }
 
   const travel = travels.find(t => t.id === params.id);

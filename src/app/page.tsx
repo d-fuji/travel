@@ -36,6 +36,21 @@ export default function Home() {
     }
   }, [isAuthenticated, mounted, fetchTravels, fetchGroups]);
 
+  // Force re-render when authentication state changes
+  useEffect(() => {
+    // This effect will trigger a re-render when isAuthenticated changes
+  }, [isAuthenticated]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <AuthForm
@@ -45,7 +60,7 @@ export default function Home() {
     );
   }
 
-  if (!mounted || isLoading) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="p-4 text-center">
