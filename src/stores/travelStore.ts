@@ -95,7 +95,7 @@ interface TravelState {
     itineraryItemId?: string;
     travelId: string;
   }) => Promise<void>;
-  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
+  updateExpense: (id: string, updates: Partial<Expense> & { categoryId?: string }) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
 
   // Legacy mock data for development
