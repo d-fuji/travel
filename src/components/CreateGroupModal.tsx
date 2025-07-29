@@ -10,9 +10,12 @@ interface CreateGroupModalProps {
   onClose: () => void;
 }
 
-export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalProps) {
+export default function CreateGroupModal({
+  isOpen,
+  onClose,
+}: CreateGroupModalProps) {
   const [groupName, setGroupName] = useState('');
-  const [memberEmails, setMemberEmails] = useState<string[]>([])
+  const [memberEmails, setMemberEmails] = useState<string[]>([]);
   const { createGroup, addMemberToGroup } = useTravelStore();
   const { user } = useAuthStore();
 
@@ -27,7 +30,7 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
     if (user && value.trim() === user.email) {
       return;
     }
-    
+
     const updated = [...memberEmails];
     updated[index] = value;
     setMemberEmails(updated);
@@ -41,11 +44,11 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
 
     // Add members (excluding creator's email)
     const validEmails = memberEmails
-      .filter(email => email.trim() && email.trim() !== user.email)
-      .map(email => email.trim());
-      
+      .filter((email) => email.trim() && email.trim() !== user.email)
+      .map((email) => email.trim());
+
     await Promise.all(
-      validEmails.map(email => addMemberToGroup(groupId, email))
+      validEmails.map((email) => addMemberToGroup(groupId, email))
     );
 
     setGroupName('');
@@ -57,7 +60,9 @@ export default function CreateGroupModal({ isOpen, onClose }: CreateGroupModalPr
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">新しいグループを作成</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            新しいグループを作成
+          </h2>
           <button
             onClick={onClose}
             className="p-1 text-gray-500 hover:text-gray-700"

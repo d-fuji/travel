@@ -3,28 +3,36 @@
 import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
-import { Heart, Share2, Plus, ArrowRight } from 'lucide-react';
+import { Share2, Plus, ArrowRight } from 'lucide-react';
 
 interface WishlistPanelProps {
   travelId: string;
 }
 
 export default function WishlistPanel({ travelId }: WishlistPanelProps) {
-  const { wishlistItems, addWishlistItem, toggleWishlistShare, moveWishlistToItinerary, fetchWishlistItems } = useTravelStore();
+  const {
+    wishlistItems,
+    addWishlistItem,
+    toggleWishlistShare,
+    moveWishlistToItinerary,
+    fetchWishlistItems,
+  } = useTravelStore();
   const { user } = useAuthStore();
 
   // Fetch wishlist items for this travel
   useEffect(() => {
     fetchWishlistItems(travelId);
   }, [travelId, fetchWishlistItems]);
-  
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
 
-  const items = wishlistItems.filter(item => item.travelId === travelId);
-  const myItems = items.filter(item => item.addedBy === user?.id);
-  const sharedItems = items.filter(item => item.isShared && item.addedBy !== user?.id);
+  const items = wishlistItems.filter((item) => item.travelId === travelId);
+  const myItems = items.filter((item) => item.addedBy === user?.id);
+  const sharedItems = items.filter(
+    (item) => item.isShared && item.addedBy !== user?.id
+  );
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,23 +66,29 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
         {/* My Wishlist */}
         <div className="bg-white rounded-2xl shadow-sm border">
           <div className="p-4 border-b bg-gray-50 rounded-t-2xl">
-            <h3 className="font-semibold text-gray-900">あなたの行きたい場所</h3>
+            <h3 className="font-semibold text-gray-900">
+              あなたの行きたい場所
+            </h3>
           </div>
           <div className="p-4">
             {myItems.length > 0 ? (
               <div className="space-y-3">
-                {myItems.map(item => (
+                {myItems.map((item) => (
                   <WishlistItemCard
                     key={item.id}
                     item={item}
                     onToggleShare={() => toggleWishlistShare(item.id)}
-                    onMoveToItinerary={(date, period) => moveWishlistToItinerary(item.id, date, period)}
+                    onMoveToItinerary={(_date, _period) =>
+                      moveWishlistToItinerary(item.id, _date, _period)
+                    }
                     showMoveButton={true}
                   />
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">まだ行きたい場所がありません</p>
+              <p className="text-gray-500 text-center py-8">
+                まだ行きたい場所がありません
+              </p>
             )}
           </div>
         </div>
@@ -83,15 +97,19 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
         {sharedItems.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border">
             <div className="p-4 border-b bg-gray-50 rounded-t-2xl">
-              <h3 className="font-semibold text-gray-900">メンバーの行きたい場所</h3>
+              <h3 className="font-semibold text-gray-900">
+                メンバーの行きたい場所
+              </h3>
             </div>
             <div className="p-4">
               <div className="space-y-3">
-                {sharedItems.map(item => (
+                {sharedItems.map((item) => (
                   <WishlistItemCard
                     key={item.id}
                     item={item}
-                    onMoveToItinerary={(date, period) => moveWishlistToItinerary(item.id, date, period)}
+                    onMoveToItinerary={(_date, _period) =>
+                      moveWishlistToItinerary(item.id, _date, _period)
+                    }
                     showMoveButton={true}
                   />
                 ))}
@@ -104,8 +122,10 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">行きたい場所を追加</h3>
-            
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              行きたい場所を追加
+            </h3>
+
             <form onSubmit={handleAddItem} className="space-y-4">
               <input
                 type="text"
@@ -115,7 +135,7 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
                 placeholder="場所名"
                 required
               />
-              
+
               <textarea
                 value={newItemDescription}
                 onChange={(e) => setNewItemDescription(e.target.value)}
@@ -154,11 +174,19 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
 interface WishlistItemCardProps {
   item: any;
   onToggleShare?: () => void;
-  onMoveToItinerary: (date: string, period: 'morning' | 'afternoon' | 'evening') => void;
+  onMoveToItinerary: (
+    _date: string,
+    _period: 'morning' | 'afternoon' | 'evening'
+  ) => void;
   showMoveButton?: boolean;
 }
 
-function WishlistItemCard({ item, onToggleShare, onMoveToItinerary, showMoveButton }: WishlistItemCardProps) {
+function WishlistItemCard({
+  item,
+  onToggleShare,
+  onMoveToItinerary,
+  showMoveButton,
+}: WishlistItemCardProps) {
   const [showMoveModal, setShowMoveModal] = useState(false);
 
   return (
@@ -171,14 +199,14 @@ function WishlistItemCard({ item, onToggleShare, onMoveToItinerary, showMoveButt
               <p className="text-sm text-gray-600 mt-1">{item.description}</p>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2 ml-3">
             {onToggleShare && (
               <button
                 onClick={onToggleShare}
                 className={`p-2 rounded-lg transition-colors ${
-                  item.isShared 
-                    ? 'bg-primary-100 text-primary-600' 
+                  item.isShared
+                    ? 'bg-primary-100 text-primary-600'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
                 title={item.isShared ? 'シェア中' : 'シェアする'}
@@ -186,7 +214,7 @@ function WishlistItemCard({ item, onToggleShare, onMoveToItinerary, showMoveButt
                 <Share2 className="w-4 h-4" />
               </button>
             )}
-            
+
             {showMoveButton && (
               <button
                 onClick={() => setShowMoveModal(true)}
@@ -211,13 +239,15 @@ function WishlistItemCard({ item, onToggleShare, onMoveToItinerary, showMoveButt
 }
 
 interface MoveToItineraryModalProps {
-  onMove: (date: string, period: 'morning' | 'afternoon' | 'evening') => void;
+  onMove: (_date: string, _period: 'morning' | 'afternoon' | 'evening') => void;
   onClose: () => void;
 }
 
 function MoveToItineraryModal({ onMove, onClose }: MoveToItineraryModalProps) {
   const [selectedDate, setSelectedDate] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<'morning' | 'afternoon' | 'evening'>('morning');
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    'morning' | 'afternoon' | 'evening'
+  >('morning');
 
   const periods = [
     { key: 'morning' as const, label: '午前' },
@@ -236,7 +266,7 @@ function MoveToItineraryModal({ onMove, onClose }: MoveToItineraryModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-lg font-bold text-gray-900 mb-4">旅程に追加</h3>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -256,7 +286,7 @@ function MoveToItineraryModal({ onMove, onClose }: MoveToItineraryModalProps) {
               時間帯を選択
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {periods.map(period => (
+              {periods.map((period) => (
                 <button
                   key={period.key}
                   type="button"

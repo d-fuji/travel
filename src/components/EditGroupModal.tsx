@@ -12,19 +12,24 @@ interface EditGroupModalProps {
   group: TravelGroup | null;
 }
 
-export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModalProps) {
+export default function EditGroupModal({
+  isOpen,
+  onClose,
+  group,
+}: EditGroupModalProps) {
   const [groupName, setGroupName] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>(['']);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { updateGroup, addMemberToGroup, removeMemberFromGroup, deleteGroup } = useTravelStore();
+  const { updateGroup, addMemberToGroup, removeMemberFromGroup, deleteGroup } =
+    useTravelStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
     if (group && user) {
       setGroupName(group.name);
-      const existingEmails = group.members.map(member => member.email);
+      const existingEmails = group.members.map((member) => member.email);
       const hasCurrentUser = existingEmails.includes(user.email);
-      
+
       if (hasCurrentUser) {
         setMemberEmails([...existingEmails]);
       } else {
@@ -44,7 +49,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
     if (user && value.trim() === user.email) {
       return;
     }
-    
+
     const updated = [...memberEmails];
     updated[index] = value;
     setMemberEmails(updated);
@@ -65,23 +70,25 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
       await updateGroup(group.id, { name: groupName });
 
       // Handle member changes
-      const currentEmails = group.members.map(m => m.email);
+      const currentEmails = group.members.map((m) => m.email);
       const newEmails = memberEmails
-        .filter(email => email.trim())
-        .map(email => email.trim());
+        .filter((email) => email.trim())
+        .map((email) => email.trim());
 
       // Add new members (excluding creator's email)
-      const emailsToAdd = newEmails.filter(email => 
-        !currentEmails.includes(email) && email !== user.email
+      const emailsToAdd = newEmails.filter(
+        (email) => !currentEmails.includes(email) && email !== user.email
       );
       for (const email of emailsToAdd) {
         await addMemberToGroup(group.id, email);
       }
 
       // Remove members (if needed - this would require additional API support)
-      const emailsToRemove = currentEmails.filter(email => !newEmails.includes(email));
+      const emailsToRemove = currentEmails.filter(
+        (email) => !newEmails.includes(email)
+      );
       for (const email of emailsToRemove) {
-        const member = group.members.find(m => m.email === email);
+        const member = group.members.find((m) => m.email === email);
         if (member) {
           await removeMemberFromGroup(group.id, member.id);
         }
@@ -95,7 +102,7 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
 
   const handleDeleteGroup = async () => {
     if (!group) return;
-    
+
     try {
       await deleteGroup(group.id);
       setShowDeleteConfirm(false);
@@ -111,13 +118,13 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
   };
 
   const isCreator = user?.id === group.createdBy || user?.id === '1';
-  
+
   console.log('EditGroupModal Debug:', {
     userId: user?.id,
     groupCreatedBy: group.createdBy,
     isCreator: isCreator,
     userObject: user,
-    groupObject: group
+    groupObject: group,
   });
 
   return (
@@ -131,8 +138,12 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">グループを削除</h3>
-                <p className="text-sm text-gray-600">この操作は取り消せません</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  グループを削除
+                </h3>
+                <p className="text-sm text-gray-600">
+                  この操作は取り消せません
+                </p>
               </div>
             </div>
             <p className="text-gray-700 mb-6">
@@ -159,98 +170,105 @@ export default function EditGroupModal({ isOpen, onClose, group }: EditGroupModa
       {/* メインモーダル */}
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">グループを編集</h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              グループ名
-            </label>
-            <input
-              type="text"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="例: 家族旅行"
-              required
-              disabled={!isCreator}
-            />
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">グループを編集</h2>
+            <button
+              onClick={onClose}
+              className="p-1 text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              メンバー（メールアドレス）
-            </label>
-            <div className="space-y-2">
-              {memberEmails.map((email, index) => (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => handleMemberChange(index, e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="member@example.com"
-                    disabled={(!isCreator && index < group.members.length) || email === user?.email}
-                  />
-                  {isCreator && memberEmails.length > 1 && email !== user?.email && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(index)}
-                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                グループ名
+              </label>
+              <input
+                type="text"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="例: 家族旅行"
+                required
+                disabled={!isCreator}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                メンバー（メールアドレス）
+              </label>
+              <div className="space-y-2">
+                {memberEmails.map((email, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) =>
+                        handleMemberChange(index, e.target.value)
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="member@example.com"
+                      disabled={
+                        (!isCreator && index < group.members.length) ||
+                        email === user?.email
+                      }
+                    />
+                    {isCreator &&
+                      memberEmails.length > 1 &&
+                      email !== user?.email && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(index)}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                  </div>
+                ))}
+                {isCreator && (
+                  <button
+                    type="button"
+                    onClick={handleAddMember}
+                    className="text-primary-600 text-sm font-medium hover:text-primary-700"
+                  >
+                    + メンバーを追加
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {!isCreator && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  グループの編集はグループ作成者のみが可能です。
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
               {isCreator && (
                 <button
                   type="button"
-                  onClick={handleAddMember}
-                  className="text-primary-600 text-sm font-medium hover:text-primary-700"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
                 >
-                  + メンバーを追加
+                  <Trash2 className="w-4 h-4" />
+                  削除
                 </button>
               )}
-            </div>
-          </div>
-
-          {!isCreator && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-sm text-amber-800">
-                グループの編集はグループ作成者のみが可能です。
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-4">
-            {isCreator && (
               <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                type="submit"
+                disabled={!isCreator}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                <Trash2 className="w-4 h-4" />
-                削除
+                更新
               </button>
-            )}
-            <button
-              type="submit"
-              disabled={!isCreator}
-              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              更新
-            </button>
-          </div>
-        </form>
+            </div>
+          </form>
         </div>
       </div>
     </>

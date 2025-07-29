@@ -12,7 +12,11 @@ interface EditTravelModalProps {
   travel: Travel | null;
 }
 
-export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelModalProps) {
+export default function EditTravelModal({
+  isOpen,
+  onClose,
+  travel,
+}: EditTravelModalProps) {
   const [name, setName] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -34,7 +38,8 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !name.trim() || !destination.trim() || !startDate || !endDate) return;
+    if (!user || !name.trim() || !destination.trim() || !startDate || !endDate)
+      return;
 
     try {
       await updateTravel(travel.id, {
@@ -51,7 +56,7 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
 
   const handleDeleteTravel = async () => {
     if (!travel) return;
-    
+
     try {
       await deleteTravel(travel.id);
       setShowDeleteConfirm(false);
@@ -83,13 +88,20 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">旅行を削除</h3>
-                <p className="text-sm text-gray-600">この操作は取り消せません</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  旅行を削除
+                </h3>
+                <p className="text-sm text-gray-600">
+                  この操作は取り消せません
+                </p>
               </div>
             </div>
             <p className="text-gray-700 mb-6">
-              旅行「{travel?.name}」を削除しますか？<br />
-              <span className="text-sm text-gray-500">関連する旅程表や行きたい場所のデータもすべて削除されます。</span>
+              旅行「{travel?.name}」を削除しますか？
+              <br />
+              <span className="text-sm text-gray-500">
+                関連する旅程表や行きたい場所のデータもすべて削除されます。
+              </span>
             </p>
             <div className="flex gap-3">
               <button
@@ -112,105 +124,105 @@ export default function EditTravelModal({ isOpen, onClose, travel }: EditTravelM
       {/* メインモーダル */}
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">旅行を編集</h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-500 hover:text-gray-700"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              旅行名
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="例: 沖縄旅行"
-              required
-              disabled={!isCreator}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              目的地
-            </label>
-            <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="例: 沖縄県"
-              required
-              disabled={!isCreator}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                出発日
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                required
-                disabled={!isCreator}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                帰着日
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                min={startDate}
-                required
-                disabled={!isCreator}
-              />
-            </div>
-          </div>
-
-          {!isCreator && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-sm text-amber-800">
-                旅行の編集は旅行作成者のみが可能です。
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-4">
-            {isCreator && (
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                削除
-              </button>
-            )}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">旅行を編集</h2>
             <button
-              type="submit"
-              disabled={!isCreator}
-              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              onClick={onClose}
+              className="p-1 text-gray-500 hover:text-gray-700"
             >
-              更新
+              <X className="w-5 h-5" />
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                旅行名
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="例: 沖縄旅行"
+                required
+                disabled={!isCreator}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                目的地
+              </label>
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="例: 沖縄県"
+                required
+                disabled={!isCreator}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  出発日
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  required
+                  disabled={!isCreator}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  帰着日
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  min={startDate}
+                  required
+                  disabled={!isCreator}
+                />
+              </div>
+            </div>
+
+            {!isCreator && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  旅行の編集は旅行作成者のみが可能です。
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              {isCreator && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  削除
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={!isCreator}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                更新
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </>

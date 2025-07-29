@@ -1,5 +1,11 @@
 import axios from 'axios';
-import { User, TravelGroup, Travel, ItineraryItem, WishlistItem } from '@/types';
+import {
+  User,
+  TravelGroup,
+  Travel,
+  ItineraryItem,
+  WishlistItem,
+} from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -58,7 +64,7 @@ function convertDates(obj: any): any {
   const result = { ...obj };
 
   // Convert common date fields
-  ['startDate', 'endDate', 'createdAt', 'updatedAt'].forEach(field => {
+  ['startDate', 'endDate', 'createdAt', 'updatedAt'].forEach((field) => {
     if (result[field] && typeof result[field] === 'string') {
       const date = new Date(result[field]);
       // Only assign if it's a valid date
@@ -79,8 +85,14 @@ function convertDates(obj: any): any {
   }
 
   // Handle nested objects
-  Object.keys(result).forEach(key => {
-    if (result[key] && typeof result[key] === 'object' && !['startDate', 'endDate', 'createdAt', 'updatedAt', 'members'].includes(key)) {
+  Object.keys(result).forEach((key) => {
+    if (
+      result[key] &&
+      typeof result[key] === 'object' &&
+      !['startDate', 'endDate', 'createdAt', 'updatedAt', 'members'].includes(
+        key
+      )
+    ) {
       if (Array.isArray(result[key])) {
         result[key] = result[key].map(convertDates);
       } else {
@@ -100,7 +112,11 @@ export const authApi = {
   },
 
   register: async (email: string, password: string, name: string) => {
-    const response = await api.post('/auth/register', { email, password, name });
+    const response = await api.post('/auth/register', {
+      email,
+      password,
+      name,
+    });
     return response.data;
   },
 };
@@ -136,16 +152,23 @@ export const travelGroupsApi = {
   },
 
   addMember: async (groupId: string, email: string) => {
-    const response = await api.post(`/travel-groups/${groupId}/members`, { email });
+    const response = await api.post(`/travel-groups/${groupId}/members`, {
+      email,
+    });
     return response.data;
   },
 
   removeMember: async (groupId: string, userId: string) => {
-    const response = await api.delete(`/travel-groups/${groupId}/members/${userId}`);
+    const response = await api.delete(
+      `/travel-groups/${groupId}/members/${userId}`
+    );
     return response.data;
   },
 
-  update: async (id: string, data: Partial<TravelGroup>): Promise<TravelGroup> => {
+  update: async (
+    id: string,
+    data: Partial<TravelGroup>
+  ): Promise<TravelGroup> => {
     const response = await api.patch(`/travel-groups/${id}`, data);
     return response.data;
   },
@@ -211,7 +234,10 @@ export const itineraryApi = {
     return response.data;
   },
 
-  update: async (id: string, data: Partial<ItineraryItem>): Promise<ItineraryItem> => {
+  update: async (
+    id: string,
+    data: Partial<ItineraryItem>
+  ): Promise<ItineraryItem> => {
     const response = await api.patch(`/itinerary/${id}`, data);
     return response.data;
   },
@@ -239,7 +265,10 @@ export const wishlistApi = {
     return response.data;
   },
 
-  update: async (id: string, data: Partial<WishlistItem>): Promise<WishlistItem> => {
+  update: async (
+    id: string,
+    data: Partial<WishlistItem>
+  ): Promise<WishlistItem> => {
     const response = await api.patch(`/wishlist/${id}`, data);
     return response.data;
   },

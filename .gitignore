@@ -89,8 +89,24 @@ web_modules/
 .parcel-cache
 
 # Next.js build output
-.next
-out
+.next/
+out/
+
+# Next.js webpack and build cache
+.next/cache/
+.next/static/chunks/
+.next/static/css/
+.next/static/media/
+.next/server/
+.next/trace
+
+# Webpack bundle analyzer
+.webpack-bundle-analyzer/
+webpack-stats.json
+analyze.html
+
+# Next.js SWC cache
+.swc/
 
 # Nuxt.js build / generate output
 .nuxt
@@ -124,9 +140,6 @@ public
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-
-# Webpack bundle analyzer
-.webpack-bundle-analyzer/
 
 # Local Netlify folder
 .netlify

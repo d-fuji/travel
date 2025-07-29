@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ItineraryItem } from '@/types';
-import { formatDate } from '@/utils/dateUtils';
 import { Plus, Edit2, Trash2, Clock, MapPin } from 'lucide-react';
 
 interface ItineraryBoardProps {
@@ -13,15 +12,25 @@ interface ItineraryBoardProps {
   endDate: Date;
 }
 
-export default function ItineraryBoard({ travelId, startDate, endDate }: ItineraryBoardProps) {
-  const { itineraryItems, addItineraryItem, updateItineraryItem, deleteItineraryItem, fetchItineraryItems } = useTravelStore();
+export default function ItineraryBoard({
+  travelId,
+  startDate,
+  endDate,
+}: ItineraryBoardProps) {
+  const {
+    itineraryItems,
+    addItineraryItem,
+    updateItineraryItem,
+    deleteItineraryItem,
+    fetchItineraryItems,
+  } = useTravelStore();
   const { user } = useAuthStore();
 
   // Fetch itinerary items for this travel
   useEffect(() => {
     fetchItineraryItems(travelId);
   }, [travelId, fetchItineraryItems]);
-  
+
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<{
     date: string;
@@ -42,14 +51,23 @@ export default function ItineraryBoard({ travelId, startDate, endDate }: Itinera
     { key: 'evening' as const, label: '夜', icon: '🌙' },
   ];
 
-  const getItemsForDatePeriod = (date: Date, period: 'morning' | 'afternoon' | 'evening') => {
+  const getItemsForDatePeriod = (
+    date: Date,
+    period: 'morning' | 'afternoon' | 'evening'
+  ) => {
     const dateStr = date.toISOString().split('T')[0];
     return itineraryItems.filter(
-      item => item.travelId === travelId && item.date === dateStr && item.period === period
+      (item) =>
+        item.travelId === travelId &&
+        item.date === dateStr &&
+        item.period === period
     );
   };
 
-  const handleAddItem = (date: Date, period: 'morning' | 'afternoon' | 'evening') => {
+  const handleAddItem = (
+    date: Date,
+    period: 'morning' | 'afternoon' | 'evening'
+  ) => {
     setNewItem({
       date: date.toISOString().split('T')[0],
       period,
@@ -86,20 +104,28 @@ export default function ItineraryBoard({ travelId, startDate, endDate }: Itinera
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold text-gray-900 mb-6">旅程表</h2>
-      
+
       <div className="space-y-6">
         {dates.map((date, dateIndex) => (
-          <div key={dateIndex} className="bg-white rounded-2xl shadow-sm border">
+          <div
+            key={dateIndex}
+            className="bg-white rounded-2xl shadow-sm border"
+          >
             <div className="p-4 border-b bg-gray-50 rounded-t-2xl">
-              <h3 className="font-semibold text-gray-900">{formatDateHeader(date)}</h3>
+              <h3 className="font-semibold text-gray-900">
+                {formatDateHeader(date)}
+              </h3>
             </div>
-            
+
             <div className="p-4 space-y-4">
-              {periods.map(period => {
+              {periods.map((period) => {
                 const items = getItemsForDatePeriod(date, period.key);
-                
+
                 return (
-                  <div key={period.key} className="border-l-4 border-gray-200 pl-4">
+                  <div
+                    key={period.key}
+                    className="border-l-4 border-gray-200 pl-4"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium text-gray-700 flex items-center gap-2">
                         <span>{period.icon}</span>
@@ -112,23 +138,23 @@ export default function ItineraryBoard({ travelId, startDate, endDate }: Itinera
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      {items.map(item => (
+                      {items.map((item) => (
                         <ItineraryItemCard
                           key={item.id}
                           item={item}
                           isEditing={editingItem === item.id}
                           onEdit={() => setEditingItem(item.id)}
-                          onSave={(updates) => {
-                            updateItineraryItem(item.id, updates);
+                          onSave={(_updates) => {
+                            updateItineraryItem(item.id, _updates);
                             setEditingItem(null);
                           }}
                           onCancel={() => setEditingItem(null)}
                           onDelete={() => deleteItineraryItem(item.id)}
                         />
                       ))}
-                      
+
                       {items.length === 0 && (
                         <p className="text-sm text-gray-500 italic">予定なし</p>
                       )}
@@ -155,12 +181,19 @@ interface ItineraryItemCardProps {
   item: ItineraryItem;
   isEditing: boolean;
   onEdit: () => void;
-  onSave: (updates: Partial<ItineraryItem>) => void;
+  onSave: (_updates: Partial<ItineraryItem>) => void;
   onCancel: () => void;
   onDelete: () => void;
 }
 
-function ItineraryItemCard({ item, isEditing, onEdit, onSave, onCancel, onDelete }: ItineraryItemCardProps) {
+function ItineraryItemCard({
+  item,
+  isEditing,
+  onEdit,
+  onSave,
+  onCancel,
+  onDelete,
+}: ItineraryItemCardProps) {
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description || '');
   const [location, setLocation] = useState(item.location || '');
@@ -208,7 +241,9 @@ function ItineraryItemCard({ item, isEditing, onEdit, onSave, onCancel, onDelete
         </div>
         <div className="flex gap-2 mt-3">
           <button
-            onClick={() => onSave({ title, description, location, startTime, endTime })}
+            onClick={() =>
+              onSave({ title, description, location, startTime, endTime })
+            }
             className="px-3 py-1 bg-primary-600 text-white text-sm rounded hover:bg-primary-700"
           >
             保存
@@ -271,7 +306,7 @@ function ItineraryItemCard({ item, isEditing, onEdit, onSave, onCancel, onDelete
 }
 
 interface AddItemModalProps {
-  onSave: (data: {
+  onSave: (_data: {
     title: string;
     description: string;
     location: string;
@@ -291,7 +326,7 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    
+
     onSave({ title, description, location, startTime, endTime });
   };
 
@@ -299,7 +334,7 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-lg font-bold text-gray-900 mb-4">予定を追加</h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -309,7 +344,7 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
             placeholder="タイトル"
             required
           />
-          
+
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -317,7 +352,7 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
             rows={3}
             placeholder="説明（任意）"
           />
-          
+
           <input
             type="text"
             value={location}
@@ -325,10 +360,12 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="場所（任意）"
           />
-          
+
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">開始時間</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                開始時間
+              </label>
               <input
                 type="time"
                 value={startTime}
@@ -337,7 +374,9 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">終了時間</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                終了時間
+              </label>
               <input
                 type="time"
                 value={endTime}

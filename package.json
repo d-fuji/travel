@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\""
   },
   "dependencies": {
     "@types/node": "^20",
@@ -24,5 +26,8 @@
     "tailwindcss": "^3.3.0",
     "typescript": "^5",
     "zustand": "^4.4.6"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
   }
 }

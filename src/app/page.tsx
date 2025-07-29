@@ -12,7 +12,8 @@ import { Plus, Users, Calendar, MapPin } from 'lucide-react';
 
 export default function Home() {
   const { user, isAuthenticated, initializeAuth } = useAuthStore();
-  const { groups, travels, createTravel, fetchTravels, fetchGroups, isLoading } = useTravelStore();
+  const { groups, travels, fetchTravels, fetchGroups, isLoading } =
+    useTravelStore();
 
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -55,7 +56,9 @@ export default function Home() {
     return (
       <AuthForm
         mode={authMode}
-        onToggleMode={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+        onToggleMode={() =>
+          setAuthMode(authMode === 'login' ? 'register' : 'login')
+        }
       />
     );
   }
@@ -70,13 +73,14 @@ export default function Home() {
     );
   }
 
-
-  const userGroups = groups.filter(group =>
-    group.createdBy === user?.id || group.members.some(member => member.id === user?.id)
+  const userGroups = groups.filter(
+    (group) =>
+      group.createdBy === user?.id ||
+      group.members.some((member) => member.id === user?.id)
   );
 
-  const userTravels = travels.filter(travel =>
-    userGroups.some(group => group.id === travel.groupId)
+  const userTravels = travels.filter((travel) =>
+    userGroups.some((group) => group.id === travel.groupId)
   );
 
   return (
@@ -96,7 +100,7 @@ export default function Home() {
 
           {userGroups.length > 0 ? (
             <div className="space-y-3">
-              {userGroups.map(group => (
+              {userGroups.map((group) => (
                 <div
                   key={group.id}
                   className="bg-white p-4 rounded-2xl shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
@@ -107,7 +111,9 @@ export default function Home() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900">{group.name}</h3>
+                      <h3 className="font-semibold text-gray-900">
+                        {group.name}
+                      </h3>
                       <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                         <Users className="w-4 h-4" />
                         <span>{group.members.length + 1}人</span>
@@ -147,13 +153,18 @@ export default function Home() {
 
           {userTravels.length > 0 ? (
             <div className="space-y-3">
-              {userTravels.map(travel => {
-                const group = groups.find(g => g.id === travel.groupId);
+              {userTravels.map((travel) => {
+                const group = groups.find((g) => g.id === travel.groupId);
                 return (
-                  <div key={travel.id} className="bg-white p-4 rounded-2xl shadow-sm border">
+                  <div
+                    key={travel.id}
+                    className="bg-white p-4 rounded-2xl shadow-sm border"
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{travel.name}</h3>
+                        <h3 className="font-semibold text-gray-900">
+                          {travel.name}
+                        </h3>
                         <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                           <MapPin className="w-4 h-4" />
                           <span>{travel.destination}</span>
@@ -161,7 +172,8 @@ export default function Home() {
                         <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {formatDate(travel.startDate)} - {formatDate(travel.endDate)}
+                            {formatDate(travel.startDate)} -{' '}
+                            {formatDate(travel.endDate)}
                           </span>
                         </div>
                         {group && (
@@ -190,7 +202,9 @@ export default function Home() {
             <div className="bg-white p-8 rounded-2xl shadow-sm border text-center">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <p className="text-gray-500 mb-4">まだ旅行がありません</p>
-              <p className="text-sm text-gray-400">グループを作成してから旅行を計画しましょう</p>
+              <p className="text-sm text-gray-400">
+                グループを作成してから旅行を計画しましょう
+              </p>
             </div>
           )}
         </div>
@@ -243,7 +257,8 @@ function CreateTravelModal({ groupId, onClose }: CreateTravelModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !name.trim() || !destination.trim() || !startDate || !endDate) return;
+    if (!user || !name.trim() || !destination.trim() || !startDate || !endDate)
+      return;
 
     try {
       await createTravel(
@@ -268,7 +283,9 @@ function CreateTravelModal({ groupId, onClose }: CreateTravelModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">新しい旅行を作成</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6">
+          新しい旅行を作成
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

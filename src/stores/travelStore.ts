@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Travel, TravelGroup, ItineraryItem, WishlistItem } from '@/types';
-import { travelGroupsApi, travelsApi, itineraryApi, wishlistApi } from '@/services/api';
+import {
+  travelGroupsApi,
+  travelsApi,
+  itineraryApi,
+  wishlistApi,
+} from '@/services/api';
 
 interface TravelState {
   groups: TravelGroup[];
@@ -18,13 +23,22 @@ interface TravelState {
 
   // Travel Group actions
   createGroup: (name: string) => Promise<string>;
-  updateGroup: (groupId: string, updates: Partial<TravelGroup>) => Promise<void>;
+  updateGroup: (
+    groupId: string,
+    updates: Partial<TravelGroup>
+  ) => Promise<void>;
   deleteGroup: (groupId: string) => Promise<void>;
   addMemberToGroup: (groupId: string, email: string) => Promise<void>;
   removeMemberFromGroup: (groupId: string, userId: string) => Promise<void>;
 
   // Travel actions
-  createTravel: (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => Promise<string>;
+  createTravel: (
+    name: string,
+    destination: string,
+    startDate: Date,
+    endDate: Date,
+    groupId: string
+  ) => Promise<string>;
   updateTravel: (travelId: string, updates: Partial<Travel>) => Promise<void>;
   deleteTravel: (travelId: string) => Promise<void>;
 
@@ -39,7 +53,10 @@ interface TravelState {
     period: 'morning' | 'afternoon' | 'evening';
     travelId: string;
   }) => Promise<void>;
-  updateItineraryItem: (id: string, updates: Partial<ItineraryItem>) => Promise<void>;
+  updateItineraryItem: (
+    id: string,
+    updates: Partial<ItineraryItem>
+  ) => Promise<void>;
   deleteItineraryItem: (id: string) => Promise<void>;
 
   // Wishlist actions
@@ -50,7 +67,11 @@ interface TravelState {
     travelId: string;
   }) => Promise<void>;
   toggleWishlistShare: (id: string) => Promise<void>;
-  moveWishlistToItinerary: (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => Promise<void>;
+  moveWishlistToItinerary: (
+    wishlistId: string,
+    date: string,
+    period: 'morning' | 'afternoon' | 'evening'
+  ) => Promise<void>;
 
   // Legacy mock data for development
   initializeWithMockData: () => void;
@@ -63,20 +84,20 @@ const mockGroups: TravelGroup[] = [
     name: '家族旅行',
     members: [
       { id: 'user-2', email: 'mom@example.com', name: 'お母さん' },
-      { id: 'user-3', email: 'dad@example.com', name: 'お父さん' }
+      { id: 'user-3', email: 'dad@example.com', name: 'お父さん' },
     ],
     createdBy: '1',
-    createdAt: new Date('2024-01-01')
+    createdAt: new Date('2024-01-01'),
   },
   {
     id: 'group-2',
     name: 'カップル旅行',
     members: [
-      { id: 'user-4', email: 'partner@example.com', name: 'パートナー' }
+      { id: 'user-4', email: 'partner@example.com', name: 'パートナー' },
     ],
     createdBy: '1',
-    createdAt: new Date('2024-01-02')
-  }
+    createdAt: new Date('2024-01-02'),
+  },
 ];
 
 const mockTravels: Travel[] = [
@@ -88,7 +109,7 @@ const mockTravels: Travel[] = [
     endDate: new Date('2024-03-23'),
     groupId: 'group-1',
     createdBy: '1',
-    createdAt: new Date('2024-01-15')
+    createdAt: new Date('2024-01-15'),
   },
   {
     id: 'travel-2',
@@ -98,8 +119,8 @@ const mockTravels: Travel[] = [
     endDate: new Date('2024-04-07'),
     groupId: 'group-2',
     createdBy: '1',
-    createdAt: new Date('2024-01-20')
-  }
+    createdAt: new Date('2024-01-20'),
+  },
 ];
 
 const mockItineraryItems: ItineraryItem[] = [
@@ -115,8 +136,8 @@ const mockItineraryItems: ItineraryItem[] = [
     travelId: 'travel-1',
     createdBy: '1',
     createdAt: new Date('2024-01-16'),
-    updatedAt: new Date('2024-01-16')
-  }
+    updatedAt: new Date('2024-01-16'),
+  },
 ];
 
 const mockWishlistItems: WishlistItem[] = [
@@ -127,8 +148,8 @@ const mockWishlistItems: WishlistItem[] = [
     addedBy: '1',
     travelId: 'travel-1',
     isShared: true,
-    createdAt: new Date('2024-01-17')
-  }
+    createdAt: new Date('2024-01-17'),
+  },
 ];
 
 export const useTravelStore = create<TravelState>()(
@@ -184,8 +205,8 @@ export const useTravelStore = create<TravelState>()(
       createGroup: async (name: string) => {
         try {
           const newGroup = await travelGroupsApi.create(name);
-          set(state => ({
-            groups: [...state.groups, newGroup]
+          set((state) => ({
+            groups: [...state.groups, newGroup],
           }));
           return newGroup.id;
         } catch (error) {
@@ -197,10 +218,10 @@ export const useTravelStore = create<TravelState>()(
       updateGroup: async (groupId: string, updates: Partial<TravelGroup>) => {
         try {
           await travelGroupsApi.update(groupId, updates);
-          set(state => ({
-            groups: state.groups.map(group =>
+          set((state) => ({
+            groups: state.groups.map((group) =>
               group.id === groupId ? { ...group, ...updates } : group
-            )
+            ),
           }));
         } catch (error) {
           console.error('Failed to update group:', error);
@@ -211,8 +232,8 @@ export const useTravelStore = create<TravelState>()(
       deleteGroup: async (groupId: string) => {
         try {
           await travelGroupsApi.delete(groupId);
-          set(state => ({
-            groups: state.groups.filter(group => group.id !== groupId)
+          set((state) => ({
+            groups: state.groups.filter((group) => group.id !== groupId),
           }));
         } catch (error) {
           console.error('Failed to delete group:', error);
@@ -242,7 +263,13 @@ export const useTravelStore = create<TravelState>()(
         }
       },
 
-      createTravel: async (name: string, destination: string, startDate: Date, endDate: Date, groupId: string) => {
+      createTravel: async (
+        name: string,
+        destination: string,
+        startDate: Date,
+        endDate: Date,
+        groupId: string
+      ) => {
         try {
           const newTravel = await travelsApi.create({
             name,
@@ -251,8 +278,8 @@ export const useTravelStore = create<TravelState>()(
             endDate: endDate.toISOString(),
             groupId,
           });
-          set(state => ({
-            travels: [...state.travels, newTravel]
+          set((state) => ({
+            travels: [...state.travels, newTravel],
           }));
           return newTravel.id;
         } catch (error) {
@@ -264,10 +291,10 @@ export const useTravelStore = create<TravelState>()(
       updateTravel: async (travelId: string, updates: Partial<Travel>) => {
         try {
           const updatedTravel = await travelsApi.update(travelId, updates);
-          set(state => ({
-            travels: state.travels.map(travel =>
+          set((state) => ({
+            travels: state.travels.map((travel) =>
               travel.id === travelId ? updatedTravel : travel
-            )
+            ),
           }));
         } catch (error) {
           console.error('Failed to update travel:', error);
@@ -278,8 +305,8 @@ export const useTravelStore = create<TravelState>()(
       deleteTravel: async (travelId: string) => {
         try {
           await travelsApi.delete(travelId);
-          set(state => ({
-            travels: state.travels.filter(travel => travel.id !== travelId)
+          set((state) => ({
+            travels: state.travels.filter((travel) => travel.id !== travelId),
           }));
         } catch (error) {
           console.error('Failed to delete travel:', error);
@@ -291,12 +318,16 @@ export const useTravelStore = create<TravelState>()(
         try {
           console.log('Attempting to create itinerary item:', item);
           const newItem = await itineraryApi.create(item);
-          set(state => ({
-            itineraryItems: [...state.itineraryItems, newItem]
+          set((state) => ({
+            itineraryItems: [...state.itineraryItems, newItem],
           }));
         } catch (error) {
           console.error('Failed to add itinerary item:', error);
-          if (typeof error === 'object' && error !== null && 'response' in error) {
+          if (
+            typeof error === 'object' &&
+            error !== null &&
+            'response' in error
+          ) {
             const err = error as { response: { data: any; status: any } };
             console.error('Error response:', err.response.data);
             console.error('Error status:', err.response.status);
@@ -308,10 +339,10 @@ export const useTravelStore = create<TravelState>()(
       updateItineraryItem: async (id: string, updates) => {
         try {
           const updatedItem = await itineraryApi.update(id, updates);
-          set(state => ({
-            itineraryItems: state.itineraryItems.map(item =>
+          set((state) => ({
+            itineraryItems: state.itineraryItems.map((item) =>
               item.id === id ? updatedItem : item
-            )
+            ),
           }));
         } catch (error) {
           console.error('Failed to update itinerary item:', error);
@@ -322,8 +353,10 @@ export const useTravelStore = create<TravelState>()(
       deleteItineraryItem: async (id: string) => {
         try {
           await itineraryApi.delete(id);
-          set(state => ({
-            itineraryItems: state.itineraryItems.filter(item => item.id !== id)
+          set((state) => ({
+            itineraryItems: state.itineraryItems.filter(
+              (item) => item.id !== id
+            ),
           }));
         } catch (error) {
           console.error('Failed to delete itinerary item:', error);
@@ -334,8 +367,8 @@ export const useTravelStore = create<TravelState>()(
       addWishlistItem: async (item) => {
         try {
           const newItem = await wishlistApi.create(item);
-          set(state => ({
-            wishlistItems: [...state.wishlistItems, newItem]
+          set((state) => ({
+            wishlistItems: [...state.wishlistItems, newItem],
           }));
         } catch (error) {
           console.error('Failed to add wishlist item:', error);
@@ -346,10 +379,10 @@ export const useTravelStore = create<TravelState>()(
       toggleWishlistShare: async (id: string) => {
         try {
           const updatedItem = await wishlistApi.toggleShare(id);
-          set(state => ({
-            wishlistItems: state.wishlistItems.map(item =>
+          set((state) => ({
+            wishlistItems: state.wishlistItems.map((item) =>
               item.id === id ? updatedItem : item
-            )
+            ),
           }));
         } catch (error) {
           console.error('Failed to toggle wishlist share:', error);
@@ -357,9 +390,15 @@ export const useTravelStore = create<TravelState>()(
         }
       },
 
-      moveWishlistToItinerary: async (wishlistId: string, date: string, period: 'morning' | 'afternoon' | 'evening') => {
+      moveWishlistToItinerary: async (
+        wishlistId: string,
+        date: string,
+        period: 'morning' | 'afternoon' | 'evening'
+      ) => {
         const { wishlistItems, addItineraryItem } = get();
-        const wishlistItem = wishlistItems.find(item => item.id === wishlistId);
+        const wishlistItem = wishlistItems.find(
+          (item) => item.id === wishlistId
+        );
 
         if (wishlistItem) {
           try {
@@ -414,17 +453,21 @@ export const useTravelStore = create<TravelState>()(
               }));
             }
             if (data.state.itineraryItems) {
-              data.state.itineraryItems = data.state.itineraryItems.map((item: any) => ({
-                ...item,
-                createdAt: item.createdAt ? new Date(item.createdAt) : null,
-                updatedAt: item.updatedAt ? new Date(item.updatedAt) : null,
-              }));
+              data.state.itineraryItems = data.state.itineraryItems.map(
+                (item: any) => ({
+                  ...item,
+                  createdAt: item.createdAt ? new Date(item.createdAt) : null,
+                  updatedAt: item.updatedAt ? new Date(item.updatedAt) : null,
+                })
+              );
             }
             if (data.state.wishlistItems) {
-              data.state.wishlistItems = data.state.wishlistItems.map((item: any) => ({
-                ...item,
-                createdAt: item.createdAt ? new Date(item.createdAt) : null,
-              }));
+              data.state.wishlistItems = data.state.wishlistItems.map(
+                (item: any) => ({
+                  ...item,
+                  createdAt: item.createdAt ? new Date(item.createdAt) : null,
+                })
+              );
             }
             return data;
           } catch (error) {

@@ -10,11 +10,18 @@ import { formatDate, parseDate } from '@/utils/dateUtils';
 import { Calendar, Heart, ArrowLeft, Settings } from 'lucide-react';
 import EditTravelModal from '@/components/EditTravelModal';
 
-export default function TravelDetailPage({ params }: { params: { id: string } }) {
-  const { user, isAuthenticated, setUser, initializeAuth } = useAuthStore();
-  const { travels, groups, fetchTravels, fetchGroups, isLoading } = useTravelStore();
-  
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist'>('itinerary');
+export default function TravelDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const { isAuthenticated, initializeAuth } = useAuthStore();
+  const { travels, groups, fetchTravels, fetchGroups, isLoading } =
+    useTravelStore();
+
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist'>(
+    'itinerary'
+  );
   const [mounted, setMounted] = useState(false);
   const [isEditTravelModalOpen, setIsEditTravelModalOpen] = useState(false);
 
@@ -42,7 +49,7 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
     );
   }
 
-  const travel = travels.find(t => t.id === params.id);
+  const travel = travels.find((t) => t.id === params.id);
 
   if (!mounted || isLoading) {
     return (
@@ -60,9 +67,11 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
         <div className="p-4 text-center">
           <p className="text-gray-500">旅行が見つかりません</p>
           <p className="text-sm text-gray-400 mt-2">Travel ID: {params.id}</p>
-          <p className="text-sm text-gray-400">Available travels: {travels.length}</p>
+          <p className="text-sm text-gray-400">
+            Available travels: {travels.length}
+          </p>
           <div className="mt-4">
-            <button 
+            <button
               onClick={() => window.history.back()}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
@@ -74,7 +83,7 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
     );
   }
 
-  const group = groups.find(g => g.id === travel.groupId);
+  const group = groups.find((g) => g.id === travel.groupId);
 
   const tabs = [
     { key: 'itinerary' as const, label: '旅程表', icon: Calendar },
@@ -96,9 +105,12 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">{travel.name}</h1>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    {travel.name}
+                  </h1>
                   <p className="text-sm text-gray-500">
-                    {travel.destination} • {formatDate(travel.startDate)} - {formatDate(travel.endDate)}
+                    {travel.destination} • {formatDate(travel.startDate)} -{' '}
+                    {formatDate(travel.endDate)}
                   </p>
                   {group && (
                     <p className="text-sm text-gray-500">{group.name}</p>
@@ -116,7 +128,7 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
 
           {/* Tabs */}
           <div className="flex bg-gray-100 rounded-lg p-1">
-            {tabs.map(tab => {
+            {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
@@ -145,10 +157,8 @@ export default function TravelDetailPage({ params }: { params: { id: string } })
               endDate={parseDate(travel.endDate) || new Date()}
             />
           )}
-          
-          {activeTab === 'wishlist' && (
-            <WishlistPanel travelId={travel.id} />
-          )}
+
+          {activeTab === 'wishlist' && <WishlistPanel travelId={travel.id} />}
         </div>
 
         {/* Edit Travel Modal */}
