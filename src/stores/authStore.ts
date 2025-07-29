@@ -72,10 +72,9 @@ export const useAuthStore = create<AuthState>()(
       checkAuthStatus: () => {
         const token = localStorage.getItem('access_token');
         const { user, isAuthenticated } = get();
-        
+
         // If we think we're authenticated but missing token or user, logout
         if (isAuthenticated && (!token || !user)) {
-          console.log('Auth state inconsistent, logging out');
           get().logout();
           window.location.href = '/';
         }

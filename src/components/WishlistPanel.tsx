@@ -21,7 +21,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
 
   // Fetch wishlist items for this travel
   useEffect(() => {
-    console.log('Fetching wishlist items for travel:', travelId);
     fetchWishlistItems(travelId);
   }, [travelId, fetchWishlistItems]);
 
@@ -35,29 +34,11 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
     (item) => item.isShared && item.addedBy !== user?.id
   );
 
-  console.log('Wishlist data:', {
-    travelId,
-    userId: user?.id,
-    totalWishlistItems: wishlistItems.length,
-    filteredItems: items.length,
-    myItems: myItems.length,
-    sharedItems: sharedItems.length,
-    wishlistItems,
-    items,
-  });
-
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newItemName.trim()) return;
 
     try {
-      console.log('Adding wishlist item:', {
-        name: newItemName,
-        description: newItemDescription,
-        travelId,
-        isShared: false,
-      });
-      
       await addWishlistItem({
         name: newItemName,
         description: newItemDescription,
@@ -69,7 +50,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       setNewItemDescription('');
       setShowAddForm(false);
     } catch (error) {
-      console.error('Failed to add wishlist item:', error);
       alert('行きたい場所の追加に失敗しました');
     }
   };
@@ -193,157 +173,155 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       )}
     </div>
   );
-}
 
-interface WishlistItemCardProps {
-  item: any;
-  onToggleShare?: () => void;
-  onMoveToItinerary: (
-    _date: string,
-    _period: 'morning' | 'afternoon' | 'evening'
-  ) => void;
-  showMoveButton?: boolean;
-}
+  interface WishlistItemCardProps {
+    item: any;
+    onToggleShare?: () => void;
+    onMoveToItinerary: (
+      _date: string,
+      _period: 'morning' | 'afternoon' | 'evening'
+    ) => void;
+    showMoveButton?: boolean;
+  }
 
-function WishlistItemCard({
-  item,
-  onToggleShare,
-  onMoveToItinerary,
-  showMoveButton,
-}: WishlistItemCardProps) {
-  const [showMoveModal, setShowMoveModal] = useState(false);
+  function WishlistItemCard({
+    item,
+    onToggleShare,
+    onMoveToItinerary,
+    showMoveButton,
+  }: WishlistItemCardProps) {
+    const [showMoveModal, setShowMoveModal] = useState(false);
 
-  return (
-    <>
-      <div className="bg-gray-50 p-4 rounded-xl border group hover:bg-gray-100 transition-colors">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h4 className="font-medium text-gray-900">{item.name}</h4>
-            {item.description && (
-              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-            )}
-          </div>
+    return (
+      <>
+        <div className="bg-gray-50 p-4 rounded-xl border group hover:bg-gray-100 transition-colors">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900">{item.name}</h4>
+              {item.description && (
+                <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2 ml-3">
-            {onToggleShare && (
-              <button
-                onClick={onToggleShare}
-                className={`p-2 rounded-lg transition-colors ${
-                  item.isShared
+            <div className="flex items-center gap-2 ml-3">
+              {onToggleShare && (
+                <button
+                  onClick={onToggleShare}
+                  className={`p-2 rounded-lg transition-colors ${item.isShared
                     ? 'bg-primary-100 text-primary-600'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-                title={item.isShared ? 'シェア中' : 'シェアする'}
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-            )}
-
-            {showMoveButton && (
-              <button
-                onClick={() => setShowMoveModal(true)}
-                className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="旅程に追加"
-              >
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {showMoveModal && (
-        <MoveToItineraryModal
-          onMove={onMoveToItinerary}
-          onClose={() => setShowMoveModal(false)}
-        />
-      )}
-    </>
-  );
-}
-
-interface MoveToItineraryModalProps {
-  onMove: (_date: string, _period: 'morning' | 'afternoon' | 'evening') => void;
-  onClose: () => void;
-}
-
-function MoveToItineraryModal({ onMove, onClose }: MoveToItineraryModalProps) {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<
-    'morning' | 'afternoon' | 'evening'
-  >('morning');
-
-  const periods = [
-    { key: 'morning' as const, label: '午前' },
-    { key: 'afternoon' as const, label: '午後' },
-    { key: 'evening' as const, label: '夜' },
-  ];
-
-  const handleMove = () => {
-    if (selectedDate) {
-      onMove(selectedDate, selectedPeriod);
-      onClose();
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">旅程に追加</h3>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              日付を選択
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              時間帯を選択
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {periods.map((period) => (
-                <button
-                  key={period.key}
-                  type="button"
-                  onClick={() => setSelectedPeriod(period.key)}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    selectedPeriod === period.key
-                      ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
+                    }`}
+                  title={item.isShared ? 'シェア中' : 'シェアする'}
                 >
-                  {period.label}
+                  <Share2 className="w-4 h-4" />
                 </button>
-              ))}
+              )}
+
+              {showMoveButton && (
+                <button
+                  onClick={() => setShowMoveModal(true)}
+                  className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="旅程に追加"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-            >
-              キャンセル
-            </button>
-            <button
-              onClick={handleMove}
-              disabled={!selectedDate}
-              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              追加
-            </button>
+        {showMoveModal && (
+          <MoveToItineraryModal
+            onMove={onMoveToItinerary}
+            onClose={() => setShowMoveModal(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  interface MoveToItineraryModalProps {
+    onMove: (_date: string, _period: 'morning' | 'afternoon' | 'evening') => void;
+    onClose: () => void;
+  }
+
+  function MoveToItineraryModal({ onMove, onClose }: MoveToItineraryModalProps) {
+    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedPeriod, setSelectedPeriod] = useState<
+      'morning' | 'afternoon' | 'evening'
+    >('morning');
+
+    const periods = [
+      { key: 'morning' as const, label: '午前' },
+      { key: 'afternoon' as const, label: '午後' },
+      { key: 'evening' as const, label: '夜' },
+    ];
+
+    const handleMove = () => {
+      if (selectedDate) {
+        onMove(selectedDate, selectedPeriod);
+        onClose();
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">旅程に追加</h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                日付を選択
+              </label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                時間帯を選択
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {periods.map((period) => (
+                  <button
+                    key={period.key}
+                    type="button"
+                    onClick={() => setSelectedPeriod(period.key)}
+                    className={`px-3 py-2 text-sm rounded-lg border transition-colors ${selectedPeriod === period.key
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleMove}
+                disabled={!selectedDate}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                追加
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 }

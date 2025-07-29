@@ -30,14 +30,6 @@ export default function EditGroupModal({
     if (group && user) {
       setGroupName(group.name);
       
-      // Debug: Log group structure
-      console.log('EditGroupModal - Group data:', {
-        group,
-        members: group.members,
-        creator: group.creator,
-        createdBy: group.createdBy,
-        currentUser: user
-      });
       
       // Get all member emails
       const memberEmails = group.members.map((member) => member.email);
@@ -61,8 +53,6 @@ export default function EditGroupModal({
       
       setMemberEmails(allEmails);
       
-      // Debug: Log final member emails
-      console.log('EditGroupModal - All emails:', allEmails, 'creatorEmail:', creatorEmail, 'memberEmails:', memberEmails);
     }
   }, [group, user]);
 
@@ -191,13 +181,6 @@ export default function EditGroupModal({
 
   const isCreator = user?.id === group.createdBy || user?.id === '1';
 
-  console.log('EditGroupModal Debug:', {
-    userId: user?.id,
-    groupCreatedBy: group.createdBy,
-    isCreator: isCreator,
-    userObject: user,
-    groupObject: group,
-  });
 
   return (
     <>

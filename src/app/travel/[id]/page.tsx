@@ -44,7 +44,6 @@ export default function TravelDetailPage({
   // Redirect to login if not authenticated
   useEffect(() => {
     if (mounted && !isAuthenticated) {
-      console.log('User not authenticated, redirecting to login');
       window.location.href = '/';
     }
   }, [mounted, isAuthenticated]);
