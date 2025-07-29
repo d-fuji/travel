@@ -96,7 +96,7 @@ export default function ItineraryBoard({
     title: string;
     description: string;
     location: string;
-    locationUrl: string;
+    locationUrl?: string;
     startTime: string;
     endTime: string;
   }) => {
@@ -328,7 +328,14 @@ function ItineraryItemCard({
         <div className="flex gap-2 mt-3">
           <button
             onClick={() =>
-              onSave({ title, description, location, locationUrl, startTime, endTime })
+              onSave({ 
+                title, 
+                description, 
+                location, 
+                locationUrl: locationUrl.trim() || undefined, 
+                startTime, 
+                endTime 
+              })
             }
             className="px-3 py-1 bg-primary-600 text-white text-sm rounded hover:bg-primary-700"
           >
@@ -421,7 +428,7 @@ interface AddItemModalProps {
     title: string;
     description: string;
     location: string;
-    locationUrl: string;
+    locationUrl?: string;
     startTime: string;
     endTime: string;
   }) => void;
@@ -440,7 +447,14 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
     e.preventDefault();
     if (!title.trim()) return;
 
-    onSave({ title, description, location, locationUrl, startTime, endTime });
+    onSave({ 
+      title, 
+      description, 
+      location, 
+      locationUrl: locationUrl.trim() || undefined, 
+      startTime, 
+      endTime 
+    });
   };
 
   return (
