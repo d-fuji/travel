@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
-import { Share2, Plus, ArrowRight } from 'lucide-react';
+import { Share2, Plus, ArrowRight, Edit2 } from 'lucide-react';
 
 interface WishlistPanelProps {
   travelId: string;
@@ -27,6 +27,7 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
+  const [editingItem, setEditingItem] = useState<any | null>(null);
 
   const items = wishlistItems.filter((item) => item.travelId === travelId);
   const myItems = items.filter((item) => item.addedBy === user?.id);
@@ -62,7 +63,7 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
           onClick={() => setShowAddForm(true)}
           className="p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
         </button>
       </div>
 
@@ -85,7 +86,9 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
                     onMoveToItinerary={(_date, _period) =>
                       moveWishlistToItinerary(item.id, _date, _period)
                     }
+                    onEdit={() => setEditingItem(item)}
                     showMoveButton={true}
+                    showEditButton={true}
                   />
                 ))}
               </div>
@@ -171,6 +174,18 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
           </div>
         </div>
       )}
+
+      {editingItem && (
+        <EditWishlistModal
+          item={editingItem}
+          onSave={(name, description) => {
+            // TODO: Implement update functionality in store
+            console.log('Updating:', editingItem.id, name, description);
+            setEditingItem(null);
+          }}
+          onCancel={() => setEditingItem(null)}
+        />
+      )}
     </div>
   );
 
@@ -181,14 +196,18 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       _date: string,
       _period: 'morning' | 'afternoon' | 'evening'
     ) => void;
+    onEdit?: () => void;
     showMoveButton?: boolean;
+    showEditButton?: boolean;
   }
 
   function WishlistItemCard({
     item,
     onToggleShare,
     onMoveToItinerary,
+    onEdit,
     showMoveButton,
+    showEditButton,
   }: WishlistItemCardProps) {
     const [showMoveModal, setShowMoveModal] = useState(false);
 
@@ -214,6 +233,16 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
                   title={item.isShared ? 'シェア中' : 'シェアする'}
                 >
                   <Share2 className="w-4 h-4" />
+                </button>
+              )}
+
+              {showEditButton && onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="p-2 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="編集"
+                >
+                  <Edit2 className="w-4 h-4" />
                 </button>
               )}
 
@@ -320,6 +349,68 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  interface EditWishlistModalProps {
+    item: any;
+    onSave: (name: string, description: string) => void;
+    onCancel: () => void;
+  }
+
+  function EditWishlistModal({ item, onSave, onCancel }: EditWishlistModalProps) {
+    const [name, setName] = useState(item.name);
+    const [description, setDescription] = useState(item.description || '');
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!name.trim()) return;
+      onSave(name, description);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">
+            行きたい場所を編集
+          </h3>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="場所名"
+              required
+            />
+
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              rows={3}
+              placeholder="メモ（任意）"
+            />
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                キャンセル
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                保存
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );

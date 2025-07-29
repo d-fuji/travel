@@ -110,8 +110,8 @@ export default function TravelDetailPage({
   const group = groups.find((g) => g.id === travel.groupId);
 
   const tabs = [
-    { key: 'itinerary' as const, label: '旅程表', icon: Calendar },
-    { key: 'wishlist' as const, label: '行きたい場所', icon: Heart },
+    { key: 'itinerary' as const, label: '旅程', icon: Calendar },
+    { key: 'wishlist' as const, label: '行きたい', icon: Heart },
     { key: 'expenses' as const, label: '費用', icon: Wallet },
   ];
 
@@ -159,11 +159,10 @@ export default function TravelDetailPage({
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === tab.key
-                      ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${activeTab === tab.key
+                    ? 'bg-white text-primary-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}

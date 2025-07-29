@@ -7,6 +7,7 @@ import { Plus, Wallet, TrendingUp, Users } from 'lucide-react';
 import AddExpenseModal from './AddExpenseModal';
 import ExpenseList from './ExpenseList';
 import ExpenseSummary from './ExpenseSummary';
+import { calculateExpenses } from '@/utils/expenseCalculations';
 
 interface ExpenseTrackerProps {
   travelId: string;
@@ -27,22 +28,20 @@ export default function ExpenseTracker({ travelId }: ExpenseTrackerProps) {
     fetchExpenses(travelId);
   }, [travelId, fetchExpenses]);
 
-  const totalAmount = travelExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const myExpenses = travelExpenses.filter(expense => expense.paidBy === user?.id);
-  const myTotalPaid = myExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const calculations = user
+    ? calculateExpenses(travelExpenses, user.id)
+    : { totalAmount: 0, myTotalPaid: 0, myTotalShare: 0, balance: 0 };
 
-  // Calculate my share of all expenses
-  const myTotalShare = travelExpenses.reduce((sum, expense) => {
-    if (expense.splitMethod === 'equal') {
-      return sum + (expense.amount / expense.splitBetween.length);
-    } else if (expense.customSplits) {
-      const myShare = expense.customSplits.find(split => split.userId === user?.id);
-      return sum + (myShare?.amount || 0);
-    }
-    return sum;
-  }, 0);
+  const { totalAmount, myTotalPaid, myTotalShare } = calculations;
 
-  const balance = myTotalPaid - myTotalShare;
+  // デバッグ用（開発時のみ）
+  if (process.env.NODE_ENV === 'development' && user && travelExpenses.length > 0) {
+    console.log('Expense calculations:', {
+      userId: user.id,
+      totalExpenses: travelExpenses.length,
+      ...calculations
+    });
+  }
 
   if (!user) {
     return (
@@ -66,14 +65,13 @@ export default function ExpenseTracker({ travelId }: ExpenseTrackerProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">費用管理</h2>
-          <p className="text-sm text-gray-500">{travel.name}</p>
+          <h2 className="text-xl font-bold text-gray-900">費用</h2>
         </div>
         <button
           onClick={() => setShowAddExpense(true)}
-          className="p-3 bg-primary-600 text-white rounded-full hover:bg-primary-700 shadow-lg"
+          className="p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
         </button>
       </div>
 
@@ -99,7 +97,7 @@ export default function ExpenseTracker({ travelId }: ExpenseTrackerProps) {
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">私の支払い</p>
+              <p className="text-sm text-gray-500">立替払い</p>
               <p className="text-lg font-semibold text-gray-900">
                 ¥{myTotalPaid.toLocaleString()}
               </p>
@@ -109,13 +107,13 @@ export default function ExpenseTracker({ travelId }: ExpenseTrackerProps) {
 
         <div className="bg-white p-4 rounded-2xl shadow-sm border">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-              <Users className={`w-5 h-5 ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Users className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">収支</p>
-              <p className={`text-lg font-semibold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {balance >= 0 ? '+' : ''}¥{balance.toLocaleString()}
+              <p className="text-sm text-gray-500">私の負担額</p>
+              <p className="text-lg font-semibold text-gray-900">
+                ¥{Math.round(myTotalShare).toLocaleString()}
               </p>
             </div>
           </div>

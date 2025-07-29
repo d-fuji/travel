@@ -30,6 +30,7 @@ export interface ItineraryItem {
   title: string;
   description?: string;
   location?: string;
+  locationUrl?: string;
   startTime?: string;
   endTime?: string;
   date: string;
