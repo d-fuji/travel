@@ -5,6 +5,7 @@ import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ItineraryItem, Expense } from '@/types';
 import { Plus, Edit2, Trash2, Clock, MapPin, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
+import ItineraryImageGallery from './ItineraryImageGallery';
 
 interface ItineraryBoardProps {
   travelId: string;
@@ -394,6 +395,18 @@ function ItineraryItemCard({
               💰 ¥{expenses.reduce((sum, exp) => sum + exp.amount, 0).toLocaleString()}
             </div>
           )}
+          
+          {/* 画像ギャラリー */}
+          <div className="mt-3">
+            <ItineraryImageGallery
+              images={item.images || []}
+              displayMode={item.imageDisplayMode || 'thumbnail'}
+              canEdit={true}
+              onImagesChange={(images) => {
+                onSave({ images });
+              }}
+            />
+          </div>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {onAddExpense && (

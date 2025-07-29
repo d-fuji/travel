@@ -1,0 +1,198 @@
+'use client';
+
+import { useState } from 'react';
+import { X, Edit2, Trash2, ChevronLeft, ChevronRight, RotateCw, Download } from 'lucide-react';
+import { ItineraryImage } from '@/types';
+
+interface ImageViewerProps {
+  images: ItineraryImage[];
+  initialIndex?: number;
+  isOpen: boolean;
+  onClose: () => void;
+  onEdit?: (image: ItineraryImage) => void;
+  onDelete?: (imageId: string) => void;
+}
+
+export default function ImageViewer({
+  images,
+  initialIndex = 0,
+  isOpen,
+  onClose,
+  onEdit,
+  onDelete,
+}: ImageViewerProps) {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [showControls, setShowControls] = useState(true);
+
+  if (!isOpen || images.length === 0) return null;
+
+  const currentImage = images[currentIndex];
+
+  const nextImage = () => {
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight') nextImage();
+    if (e.key === 'ArrowLeft') prevImage();
+    if (e.key === 'Escape') onClose();
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+      onClick={() => setShowControls(!showControls)}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+    >
+      {/* 閉じるボタン */}
+      <button
+        onClick={onClose}
+        className={`absolute top-4 right-4 p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all z-10 ${
+          showControls ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <X className="w-6 h-6" />
+      </button>
+
+      {/* ナビゲーション（複数画像の場合） */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              prevImage();
+            }}
+            className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all ${
+              showControls ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              nextImage();
+            }}
+            className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all ${
+              showControls ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </>
+      )}
+
+      {/* 画像表示 */}
+      <div 
+        className="relative max-w-full max-h-full p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={currentImage.url}
+          alt={currentImage.altText || currentImage.caption || '画像'}
+          className="max-w-full max-h-[80vh] object-contain rounded-lg"
+          loading="lazy"
+        />
+
+        {/* 画像情報 */}
+        {currentImage.caption && (
+          <div className={`absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white p-4 rounded-b-lg transition-all ${
+            showControls ? 'opacity-100' : 'opacity-0'
+          }`}>
+            <p className="text-sm">{currentImage.caption}</p>
+          </div>
+        )}
+      </div>
+
+      {/* コントロールバー */}
+      <div className={`absolute top-4 left-4 right-16 flex items-center justify-between transition-all ${
+        showControls ? 'opacity-100' : 'opacity-0'
+      }`}>
+        <div className="flex items-center gap-2 text-white">
+          <span className="text-sm">
+            {currentIndex + 1} / {images.length}
+          </span>
+          <span className="text-xs text-gray-300">
+            {currentImage.originalFileName}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(currentImage);
+              }}
+              className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg"
+              title="編集"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // ダウンロード機能（モック）
+              console.log('Download image:', currentImage.originalFileName);
+            }}
+            className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg"
+            title="ダウンロード"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm('この画像を削除しますか？')) {
+                  onDelete(currentImage.id);
+                }
+              }}
+              className="p-2 text-white hover:bg-red-500 hover:bg-opacity-20 rounded-lg"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* サムネイル（複数画像の場合） */}
+      {images.length > 1 && (
+        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 transition-all ${
+          showControls ? 'opacity-100' : 'opacity-0'
+        }`}>
+          {images.map((image, index) => (
+            <button
+              key={image.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex(index);
+              }}
+              className={`w-12 h-12 rounded overflow-hidden border-2 transition-all ${
+                index === currentIndex
+                  ? 'border-white'
+                  : 'border-transparent hover:border-gray-400'
+              }`}
+            >
+              <img
+                src={image.thumbnailUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

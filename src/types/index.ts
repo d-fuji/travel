@@ -39,6 +39,10 @@ export interface ItineraryItem {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  images?: ItineraryImage[];
+  mainImageId?: string;
+  showImages?: boolean;
+  imageDisplayMode?: 'thumbnail' | 'full' | 'slideshow' | 'grid';
 }
 
 export interface WishlistItem {
@@ -84,4 +88,29 @@ export interface Budget {
   categoryBudgets: { categoryId: string; amount: number }[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ItineraryImage {
+  id: string;
+  itineraryItemId: string;
+  url: string;
+  thumbnailUrl: string;
+  originalFileName: string;
+  mimeType: string;
+  fileSize: number;
+  width: number;
+  height: number;
+  caption?: string;
+  altText?: string;
+  order: number;
+  isMain: boolean;
+  uploadedBy: string;
+  uploadedAt: Date;
+}
+
+export interface ImageUploadOptions {
+  quality: 'high' | 'medium' | 'low';
+  maxWidth?: number;
+  maxHeight?: number;
+  enableCompression: boolean;
 }
