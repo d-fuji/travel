@@ -195,10 +195,14 @@ export const useTravelStore = create<TravelState>()(
 
       fetchWishlistItems: async (travelId: string) => {
         try {
+          console.log('Fetching wishlist items from API for travel:', travelId);
           const wishlistItems = await wishlistApi.getByTravel(travelId);
+          console.log('Received wishlist items:', wishlistItems);
           set({ wishlistItems });
         } catch (error) {
           console.error('Failed to fetch wishlist items:', error);
+          // Set empty array on error to clear stale data
+          set({ wishlistItems: [] });
         }
       },
 
@@ -366,12 +370,18 @@ export const useTravelStore = create<TravelState>()(
 
       addWishlistItem: async (item) => {
         try {
+          console.log('Creating wishlist item via API:', item);
           const newItem = await wishlistApi.create(item);
+          console.log('Created wishlist item:', newItem);
           set((state) => ({
             wishlistItems: [...state.wishlistItems, newItem],
           }));
         } catch (error) {
           console.error('Failed to add wishlist item:', error);
+          if (error.response) {
+            console.error('API Error response:', error.response.data);
+            console.error('API Error status:', error.response.status);
+          }
           throw error;
         }
       },

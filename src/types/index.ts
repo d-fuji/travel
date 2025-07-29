@@ -9,6 +9,7 @@ export interface TravelGroup {
   id: string;
   name: string;
   members: User[];
+  creator?: User; // creator information from API
   createdBy: string;
   createdAt: Date;
 }

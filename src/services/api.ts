@@ -49,8 +49,11 @@ api.interceptors.response.use(
     });
 
     if (error.response?.status === 401) {
+      console.log('Unauthorized access detected, logging out');
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      localStorage.removeItem('auth-storage');
+      localStorage.removeItem('travel-storage');
       window.location.href = '/';
     }
     return Promise.reject(error);

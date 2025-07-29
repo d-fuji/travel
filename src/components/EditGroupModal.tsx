@@ -20,6 +20,8 @@ export default function EditGroupModal({
   const [groupName, setGroupName] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>(['']);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { updateGroup, addMemberToGroup, removeMemberFromGroup, deleteGroup } =
     useTravelStore();
   const { user } = useAuthStore();
@@ -27,14 +29,40 @@ export default function EditGroupModal({
   useEffect(() => {
     if (group && user) {
       setGroupName(group.name);
-      const existingEmails = group.members.map((member) => member.email);
-      const hasCurrentUser = existingEmails.includes(user.email);
-
-      if (hasCurrentUser) {
-        setMemberEmails([...existingEmails]);
-      } else {
-        setMemberEmails([user.email, ...existingEmails]);
+      
+      // Debug: Log group structure
+      console.log('EditGroupModal - Group data:', {
+        group,
+        members: group.members,
+        creator: group.creator,
+        createdBy: group.createdBy,
+        currentUser: user
+      });
+      
+      // Get all member emails
+      const memberEmails = group.members.map((member) => member.email);
+      
+      // Get creator's email from group.creator if available, otherwise from current user if they're the creator
+      let creatorEmail = '';
+      if (group.creator) {
+        creatorEmail = group.creator.email;
+      } else if (group.createdBy === user.id) {
+        creatorEmail = user.email;
       }
+      
+      // Create complete email list
+      // All members should already include the creator since backend adds creator to members table
+      // But let's make sure creator is included just in case
+      let allEmails = [...memberEmails];
+      if (creatorEmail && !allEmails.includes(creatorEmail)) {
+        // Put creator email first
+        allEmails = [creatorEmail, ...memberEmails];
+      }
+      
+      setMemberEmails(allEmails);
+      
+      // Debug: Log final member emails
+      console.log('EditGroupModal - All emails:', allEmails, 'creatorEmail:', creatorEmail, 'memberEmails:', memberEmails);
     }
   }, [group, user]);
 
@@ -44,7 +72,15 @@ export default function EditGroupModal({
     setMemberEmails([...memberEmails, '']);
   };
 
+  const handleInputChange = () => {
+    if (error) {
+      setError('');
+    }
+  };
+
   const handleMemberChange = (index: number, value: string) => {
+    handleInputChange();
+    
     // 作成者のメールアドレスが入力された場合は無視する
     if (user && value.trim() === user.email) {
       return;
@@ -64,6 +100,9 @@ export default function EditGroupModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !groupName.trim()) return;
+
+    setLoading(true);
+    setError('');
 
     try {
       // Update group name
@@ -95,8 +134,41 @@ export default function EditGroupModal({
       }
 
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update group:', error);
+      
+      // Extract error message from API response
+      let errorMessage = 'グループの更新に失敗しました';
+      if (error.response?.data?.message) {
+        const apiMessage = error.response.data.message;
+        if (apiMessage.includes('User not found')) {
+          errorMessage = '指定されたメールアドレスのユーザーが見つかりません';
+        } else if (apiMessage.includes('already exists') || apiMessage.includes('duplicate')) {
+          errorMessage = 'このメンバーは既にグループに追加されています';
+        } else if (apiMessage.includes('permission') || apiMessage.includes('unauthorized')) {
+          errorMessage = 'グループを編集する権限がありません';
+        } else if (apiMessage.includes('validation') || apiMessage.includes('invalid')) {
+          errorMessage = '入力内容に誤りがあります';
+        } else if (apiMessage.includes('network') || apiMessage.includes('connection')) {
+          errorMessage = 'ネットワークエラーが発生しました';
+        } else {
+          errorMessage = apiMessage;
+        }
+      } else if (error.response?.status === 403) {
+        errorMessage = 'グループを編集する権限がありません';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'グループが見つかりません';
+      } else if (error.response?.status === 400) {
+        errorMessage = '入力内容に誤りがあります';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'ネットワークに接続できません';
+      } else if (error.message && error.message.includes('Network Error')) {
+        errorMessage = 'ネットワークエラーが発生しました';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,7 +260,10 @@ export default function EditGroupModal({
               <input
                 type="text"
                 value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
+                onChange={(e) => {
+                  setGroupName(e.target.value);
+                  handleInputChange();
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="例: 家族旅行"
                 required
@@ -209,12 +284,13 @@ export default function EditGroupModal({
                       onChange={(e) =>
                         handleMemberChange(index, e.target.value)
                       }
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                        (!isCreator && index < group.members.length) || email === user?.email
+                          ? 'bg-gray-50 text-gray-700'
+                          : ''
+                      }`}
                       placeholder="member@example.com"
-                      disabled={
-                        (!isCreator && index < group.members.length) ||
-                        email === user?.email
-                      }
+                      readOnly={email === user?.email}
                     />
                     {isCreator &&
                       memberEmails.length > 1 &&
@@ -241,6 +317,25 @@ export default function EditGroupModal({
               </div>
             </div>
 
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {error}
+                </div>
+              </div>
+            )}
+
             {!isCreator && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-sm text-amber-800">
@@ -262,10 +357,10 @@ export default function EditGroupModal({
               )}
               <button
                 type="submit"
-                disabled={!isCreator}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={!isCreator || loading}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
-                更新
+                {loading ? '更新中...' : '更新'}
               </button>
             </div>
           </form>

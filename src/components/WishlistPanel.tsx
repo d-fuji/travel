@@ -21,6 +21,7 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
 
   // Fetch wishlist items for this travel
   useEffect(() => {
+    console.log('Fetching wishlist items for travel:', travelId);
     fetchWishlistItems(travelId);
   }, [travelId, fetchWishlistItems]);
 
@@ -34,20 +35,43 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
     (item) => item.isShared && item.addedBy !== user?.id
   );
 
-  const handleAddItem = (e: React.FormEvent) => {
+  console.log('Wishlist data:', {
+    travelId,
+    userId: user?.id,
+    totalWishlistItems: wishlistItems.length,
+    filteredItems: items.length,
+    myItems: myItems.length,
+    sharedItems: sharedItems.length,
+    wishlistItems,
+    items,
+  });
+
+  const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newItemName.trim()) return;
 
-    addWishlistItem({
-      name: newItemName,
-      description: newItemDescription,
-      travelId,
-      isShared: false,
-    });
+    try {
+      console.log('Adding wishlist item:', {
+        name: newItemName,
+        description: newItemDescription,
+        travelId,
+        isShared: false,
+      });
+      
+      await addWishlistItem({
+        name: newItemName,
+        description: newItemDescription,
+        travelId,
+        isShared: false,
+      });
 
-    setNewItemName('');
-    setNewItemDescription('');
-    setShowAddForm(false);
+      setNewItemName('');
+      setNewItemDescription('');
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Failed to add wishlist item:', error);
+      alert('行きたい場所の追加に失敗しました');
+    }
   };
 
   return (

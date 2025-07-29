@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useTravelStore } from '@/stores/travelStore';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import Layout from '@/components/Layout';
 import ItineraryBoard from '@/components/ItineraryBoard';
 import WishlistPanel from '@/components/WishlistPanel';
@@ -15,7 +16,8 @@ export default function TravelDetailPage({
 }: {
   params: { id: string };
 }) {
-  const { isAuthenticated, initializeAuth } = useAuthStore();
+  const { initializeAuth } = useAuthStore();
+  const { isAuthenticated } = useAuthGuard();
   const { travels, groups, fetchTravels, fetchGroups, isLoading } =
     useTravelStore();
 
@@ -39,11 +41,29 @@ export default function TravelDetailPage({
     }
   }, [isAuthenticated, mounted, fetchTravels, fetchGroups]);
 
-  if (!isAuthenticated) {
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (mounted && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      window.location.href = '/';
+    }
+  }, [mounted, isAuthenticated]);
+
+  if (!mounted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">ログイン画面に移動中...</p>
         </div>
       </div>
     );

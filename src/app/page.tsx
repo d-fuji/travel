@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useTravelStore } from '@/stores/travelStore';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import AuthForm from '@/components/AuthForm';
 import Layout from '@/components/Layout';
 import CreateGroupModal from '@/components/CreateGroupModal';
@@ -11,7 +12,8 @@ import { formatDate } from '@/utils/dateUtils';
 import { Plus, Users, Calendar, MapPin } from 'lucide-react';
 
 export default function Home() {
-  const { user, isAuthenticated, initializeAuth } = useAuthStore();
+  const { user, initializeAuth } = useAuthStore();
+  const { isAuthenticated } = useAuthGuard();
   const { groups, travels, fetchTravels, fetchGroups, isLoading } =
     useTravelStore();
 
