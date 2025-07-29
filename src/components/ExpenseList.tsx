@@ -5,6 +5,7 @@ import { Expense, User } from '@/types';
 import { useTravelStore } from '@/stores/travelStore';
 import { formatDate } from '@/utils/dateUtils';
 import { Edit2, Trash2, Filter, Calendar } from 'lucide-react';
+import EditExpenseModal from './EditExpenseModal';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -12,10 +13,12 @@ interface ExpenseListProps {
 }
 
 export default function ExpenseList({ expenses, groupMembers }: ExpenseListProps) {
-  const { itineraryItems } = useTravelStore();
+  const { itineraryItems, deleteExpense } = useTravelStore();
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'category'>('date');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterPaidBy, setFilterPaidBy] = useState<string>('');
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Get unique categories from expenses
   const categories = Array.from(new Set(expenses.map(e => e.category.id)))
@@ -61,6 +64,39 @@ export default function ExpenseList({ expenses, groupMembers }: ExpenseListProps
   const getItineraryItem = (itemId: string | undefined) => {
     if (!itemId) return null;
     return itineraryItems.find(item => item.id === itemId);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteExpense = async (expense: Expense) => {
+    if (window.confirm(`「${expense.title}」を削除しますか？この操作は取り消せません。`)) {
+      try {
+        await deleteExpense(expense.id);
+      } catch (error) {
+        console.error('Failed to delete expense:', error);
+        
+        let errorMessage = '支出の削除に失敗しました。';
+        
+        if (error && typeof error === 'object' && 'response' in error) {
+          const apiError = error as { response: { data?: any; status?: number } };
+          
+          if (apiError.response?.status === 401) {
+            errorMessage = '認証が無効です。再度ログインしてください。';
+          } else if (apiError.response?.status === 403) {
+            errorMessage = 'この操作を実行する権限がありません。';
+          } else if (apiError.response?.data?.message) {
+            errorMessage = `エラー: ${apiError.response.data.message}`;
+          }
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = `エラー: ${(error as Error).message}`;
+        }
+        
+        alert(errorMessage);
+      }
+    }
   };
 
   if (expenses.length === 0) {
@@ -175,11 +211,19 @@ export default function ExpenseList({ expenses, groupMembers }: ExpenseListProps
                   ¥{expense.amount.toLocaleString()}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
-                  <button className="p-1 hover:bg-gray-100 rounded">
-                    <Edit2 className="w-4 h-4 text-gray-400" />
+                  <button 
+                    onClick={() => handleEditExpense(expense)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                    title="編集"
+                  >
+                    <Edit2 className="w-4 h-4 text-gray-400 hover:text-primary-600" />
                   </button>
-                  <button className="p-1 hover:bg-gray-100 rounded">
-                    <Trash2 className="w-4 h-4 text-gray-400" />
+                  <button 
+                    onClick={() => handleDeleteExpense(expense)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                    title="削除"
+                  >
+                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
                   </button>
                 </div>
               </div>
@@ -195,6 +239,19 @@ export default function ExpenseList({ expenses, groupMembers }: ExpenseListProps
             {filteredExpenses.length}件 / 全{expenses.length}件の支出を表示中
           </p>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingExpense && (
+        <EditExpenseModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingExpense(null);
+          }}
+          expense={editingExpense}
+          groupMembers={groupMembers}
+        />
       )}
     </div>
   );
