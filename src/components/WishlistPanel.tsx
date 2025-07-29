@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
-import { Share2, Plus, ArrowRight, Edit2 } from 'lucide-react';
+import { Plus, ArrowRight, Edit2, Trash2, X } from 'lucide-react';
 
 interface WishlistPanelProps {
   travelId: string;
@@ -13,7 +13,8 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
   const {
     wishlistItems,
     addWishlistItem,
-    toggleWishlistShare,
+    updateWishlistItem,
+    deleteWishlistItem,
     moveWishlistToItinerary,
     fetchWishlistItems,
   } = useTravelStore();
@@ -51,7 +52,32 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       setNewItemDescription('');
       setShowAddForm(false);
     } catch (error) {
-      alert('行きたい場所の追加に失敗しました');
+      console.error('Wishlist add error:', error);
+      
+      let errorMessage = '行きたい場所の追加に失敗しました。';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const apiError = error as { response: { data?: any; status?: number } };
+        
+        if (apiError.response?.status === 401) {
+          errorMessage = '認証が無効です。再度ログインしてください。';
+        } else if (apiError.response?.status === 403) {
+          errorMessage = 'この操作を実行する権限がありません。';
+        } else if (apiError.response?.status === 400) {
+          const validationErrors = apiError.response.data?.message;
+          if (Array.isArray(validationErrors)) {
+            errorMessage = `入力エラー: ${validationErrors.join(', ')}`;
+          } else if (typeof validationErrors === 'string') {
+            errorMessage = `入力エラー: ${validationErrors}`;
+          }
+        } else if (apiError.response?.data?.message) {
+          errorMessage = `エラー: ${apiError.response.data.message}`;
+        }
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = `エラー: ${(error as Error).message}`;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -82,7 +108,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
                   <WishlistItemCard
                     key={item.id}
                     item={item}
-                    onToggleShare={() => toggleWishlistShare(item.id)}
                     onMoveToItinerary={(_date, _period) =>
                       moveWishlistToItinerary(item.id, _date, _period)
                     }
@@ -178,12 +203,26 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       {editingItem && (
         <EditWishlistModal
           item={editingItem}
-          onSave={(name, description) => {
-            // TODO: Implement update functionality in store
-            console.log('Updating:', editingItem.id, name, description);
-            setEditingItem(null);
+          onSave={async (name, description) => {
+            try {
+              await updateWishlistItem(editingItem.id, {
+                name,
+                description: description || undefined,
+              });
+              setEditingItem(null);
+            } catch (error) {
+              alert('更新に失敗しました');
+            }
           }}
           onCancel={() => setEditingItem(null)}
+          onDelete={async () => {
+            try {
+              await deleteWishlistItem(editingItem.id);
+              setEditingItem(null);
+            } catch (error) {
+              alert('削除に失敗しました');
+            }
+          }}
         />
       )}
     </div>
@@ -191,7 +230,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
 
   interface WishlistItemCardProps {
     item: any;
-    onToggleShare?: () => void;
     onMoveToItinerary: (
       _date: string,
       _period: 'morning' | 'afternoon' | 'evening'
@@ -203,7 +241,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
 
   function WishlistItemCard({
     item,
-    onToggleShare,
     onMoveToItinerary,
     onEdit,
     showMoveButton,
@@ -223,19 +260,6 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
             </div>
 
             <div className="flex items-center gap-2 ml-3">
-              {onToggleShare && (
-                <button
-                  onClick={onToggleShare}
-                  className={`p-2 rounded-lg transition-colors ${item.isShared
-                    ? 'bg-primary-100 text-primary-600'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                  title={item.isShared ? 'シェア中' : 'シェアする'}
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
-              )}
-
               {showEditButton && onEdit && (
                 <button
                   onClick={onEdit}
@@ -358,11 +382,13 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
     item: any;
     onSave: (name: string, description: string) => void;
     onCancel: () => void;
+    onDelete: () => void;
   }
 
-  function EditWishlistModal({ item, onSave, onCancel }: EditWishlistModalProps) {
+  function EditWishlistModal({ item, onSave, onCancel, onDelete }: EditWishlistModalProps) {
     const [name, setName] = useState(item.name);
     const [description, setDescription] = useState(item.description || '');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -370,10 +396,24 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
       onSave(name, description);
     };
 
+    const handleDelete = () => {
+      if (showDeleteConfirm) {
+        onDelete();
+      } else {
+        setShowDeleteConfirm(true);
+      }
+    };
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md relative">
+          <button
+            onClick={onCancel}
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <h3 className="text-lg font-bold text-gray-900 mb-4 pr-10">
             行きたい場所を編集
           </h3>
 
@@ -398,10 +438,14 @@ export default function WishlistPanel({ travelId }: WishlistPanelProps) {
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
-                onClick={onCancel}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                onClick={handleDelete}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                  showDeleteConfirm
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-100 text-red-600 hover:bg-red-200'
+                }`}
               >
-                キャンセル
+                {showDeleteConfirm ? '削除実行' : '削除'}
               </button>
               <button
                 type="submit"

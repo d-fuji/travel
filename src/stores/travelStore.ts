@@ -74,6 +74,11 @@ interface TravelState {
     isShared?: boolean;
     travelId: string;
   }) => Promise<void>;
+  updateWishlistItem: (
+    id: string,
+    updates: Partial<WishlistItem>
+  ) => Promise<void>;
+  deleteWishlistItem: (id: string) => Promise<void>;
   toggleWishlistShare: (id: string) => Promise<void>;
   moveWishlistToItinerary: (
     wishlistId: string,
@@ -452,6 +457,34 @@ export const useTravelStore = create<TravelState>()(
             wishlistItems: [...state.wishlistItems, newItem],
           }));
         } catch (error) {
+          throw error;
+        }
+      },
+
+      updateWishlistItem: async (id: string, updates) => {
+        try {
+          const updatedItem = await wishlistApi.update(id, updates);
+          set((state) => ({
+            wishlistItems: state.wishlistItems.map((item) =>
+              item.id === id ? updatedItem : item
+            ),
+          }));
+        } catch (error) {
+          console.error('Failed to update wishlist item:', error);
+          throw error;
+        }
+      },
+
+      deleteWishlistItem: async (id: string) => {
+        try {
+          await wishlistApi.delete(id);
+          set((state) => ({
+            wishlistItems: state.wishlistItems.filter(
+              (item) => item.id !== id
+            ),
+          }));
+        } catch (error) {
+          console.error('Failed to delete wishlist item:', error);
           throw error;
         }
       },
