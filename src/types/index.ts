@@ -42,7 +42,7 @@ export interface ItineraryItem {
   images?: ItineraryImage[];
   mainImageId?: string;
   showImages?: boolean;
-  imageDisplayMode?: 'thumbnail' | 'full' | 'slideshow' | 'grid';
+  imageDisplayMode?: 'thumbnail' | 'full' | 'grid';
 }
 
 export interface WishlistItem {
