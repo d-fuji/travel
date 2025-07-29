@@ -117,7 +117,7 @@ export default function Home() {
                       </h3>
                       <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                         <Users className="w-4 h-4" />
-                        <span>{group.createdBy === user?.id ? group.members.length : group.members.length + 1}人</span>
+                        <span>{group.members.length}人</span>
                       </div>
                     </div>
                     <button
