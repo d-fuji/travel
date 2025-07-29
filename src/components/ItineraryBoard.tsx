@@ -56,12 +56,20 @@ export default function ItineraryBoard({
     period: 'morning' | 'afternoon' | 'evening'
   ) => {
     const dateStr = date.toISOString().split('T')[0];
-    return itineraryItems.filter(
+    const filteredItems = itineraryItems.filter(
       (item) =>
         item.travelId === travelId &&
         item.date === dateStr &&
         item.period === period
     );
+    
+    // Sort by start time, putting items without start time at the end
+    return filteredItems.sort((a, b) => {
+      if (!a.startTime && !b.startTime) return 0;
+      if (!a.startTime) return 1;
+      if (!b.startTime) return -1;
+      return a.startTime.localeCompare(b.startTime);
+    });
   };
 
   const handleAddItem = (
@@ -361,27 +369,27 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
             placeholder="場所（任意）"
           />
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 開始時間
               </label>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 終了時間
               </label>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
               />
             </div>
           </div>
