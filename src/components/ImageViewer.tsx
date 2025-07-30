@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Edit2, Trash2, ChevronLeft, ChevronRight, RotateCw, Download } from 'lucide-react';
 import { ItineraryImage } from '@/types';
 
@@ -27,6 +27,31 @@ export default function ImageViewer({
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+
+  // バックグラウンドスクロールを無効化
+  useEffect(() => {
+    if (isOpen) {
+      // スクロールを無効化
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      
+      // iPhone Safariでの追加対策
+      const preventDefault = (e: Event) => {
+        e.preventDefault();
+      };
+      
+      document.addEventListener('touchmove', preventDefault, { passive: false });
+      document.addEventListener('wheel', preventDefault, { passive: false });
+      
+      return () => {
+        // クリーンアップ
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+        document.removeEventListener('touchmove', preventDefault);
+        document.removeEventListener('wheel', preventDefault);
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen || images.length === 0) return null;
 
