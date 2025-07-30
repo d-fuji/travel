@@ -39,6 +39,8 @@ interface AuthState {
   login: (_email: string, _password: string) => Promise<{ success: boolean; user?: User; message?: string }>;
   register: (_email: string, _password: string, _name: string) => Promise<{ success: boolean; user?: User; message?: string }>;
   guestLogin: (_nickname: string, _groupId: string) => Promise<{ success: boolean; guestUser?: GuestUser; message?: string }>;
+  quickGuestLogin: () => Promise<{ success: boolean; guestUser?: GuestUser; message?: string }>;
+  getStoredGuestInfo: () => { nickname: string; deviceFingerprint: string; groupId: string; lastLoginAt: string } | null;
   refreshGuestSession: (_tempId: string) => Promise<{ success: boolean; guestUser?: GuestUser; message?: string }>;
   setGuestUser: (_guestUser: GuestUser) => void;
   convertGuestToUser: (_user: User) => void;
@@ -99,6 +101,16 @@ export const useAuthStore = create<AuthState>()(
           const { guestUser, access_token } = response;
 
           localStorage.setItem('access_token', access_token);
+          
+          // Save guest login info for future use
+          const guestLoginInfo = {
+            nickname,
+            deviceFingerprint,
+            groupId,
+            lastLoginAt: new Date().toISOString()
+          };
+          localStorage.setItem('guest-login-info', JSON.stringify(guestLoginInfo));
+          
           set({ 
             guestUser, 
             isGuest: true, 
@@ -112,6 +124,54 @@ export const useAuthStore = create<AuthState>()(
           console.error('Guest login failed:', error);
           set({ isLoading: false });
           return { success: false, message: 'ゲストログインに失敗しました' };
+        }
+      },
+
+      quickGuestLogin: async () => {
+        set({ isLoading: true });
+        try {
+          const guestInfo = JSON.parse(localStorage.getItem('guest-login-info') || 'null');
+          if (!guestInfo) {
+            set({ isLoading: false });
+            return { success: false, message: '保存されたゲスト情報がありません' };
+          }
+
+          const { nickname, deviceFingerprint, groupId } = guestInfo;
+          const response = await authApi.guestLogin(nickname, deviceFingerprint, groupId);
+          const { guestUser, access_token } = response;
+
+          localStorage.setItem('access_token', access_token);
+          
+          // Update last login time
+          const updatedGuestInfo = {
+            ...guestInfo,
+            lastLoginAt: new Date().toISOString()
+          };
+          localStorage.setItem('guest-login-info', JSON.stringify(updatedGuestInfo));
+          
+          set({ 
+            guestUser, 
+            isGuest: true, 
+            isAuthenticated: true, 
+            user: null, 
+            isLoading: false 
+          });
+          
+          return { success: true, guestUser };
+        } catch (error) {
+          console.error('Quick guest login failed:', error);
+          set({ isLoading: false });
+          return { success: false, message: 'ゲストログインに失敗しました' };
+        }
+      },
+
+      getStoredGuestInfo: () => {
+        try {
+          const guestInfo = localStorage.getItem('guest-login-info');
+          return guestInfo ? JSON.parse(guestInfo) : null;
+        } catch (error) {
+          console.error('Failed to get stored guest info:', error);
+          return null;
         }
       },
 
