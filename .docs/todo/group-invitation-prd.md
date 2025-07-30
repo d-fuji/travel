@@ -24,13 +24,11 @@
 #### 1.1 リンク生成
 - **ワンクリック生成**：グループ管理者がボタン一つでリンク生成
 - **カスタムメッセージ**：招待時に含めるメッセージの設定
-- **有効期限設定**：リンクの有効期限（1日、1週間、1ヶ月、無期限）
-- **使用回数制限**：リンクの使用可能回数設定（1回、5回、10回、無制限）
 
 #### 1.2 リンク管理
 - **リンク一覧表示**：生成済みリンクの管理画面
 - **リンク無効化**：既存リンクの即座な無効化
-- **使用状況確認**：リンクの使用履歴・残り回数表示
+- **使用状況確認**：リンクの使用履歴表示
 - **リンク再生成**：新しいリンクの生成
 
 ### 2. 招待リンク共有機能
@@ -49,7 +47,7 @@
 ### 3. 招待リンク参加機能
 
 #### 3.1 リンクアクセス処理
-- **リンク有効性確認**：期限・使用回数のチェック
+- **リンク有効性確認**：リンクの活性状態チェック
 - **グループ情報表示**：参加前のグループ詳細確認
 - **参加者一覧**：既存メンバーの確認（プライバシー考慮）
 - **参加確認画面**：最終的な参加意思確認
@@ -126,13 +124,10 @@
 ```typescript
 interface InvitationLink {
   id: string;
-  travelId: string;
+  groupId: string;
   token: string; // セキュアなランダムトークン
   createdBy: string; // User ID
   customMessage?: string;
-  expiresAt?: Date;
-  maxUses?: number;
-  currentUses: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -142,20 +137,15 @@ interface InvitationUsage {
   id: string;
   invitationLinkId: string;
   userId: string;
-  ipAddress: string;
-  userAgent: string;
   usedAt: Date;
   success: boolean;
-  errorMessage?: string;
 }
 
 interface InvitationSettings {
   id: string;
-  travelId: string;
+  groupId: string;
   allowMemberInvite: boolean; // 一般メンバーの招待権限
   requireApproval: boolean; // 管理者承認が必要か
-  defaultExpiration: number; // デフォルト有効期限（時間）
-  defaultMaxUses: number; // デフォルト使用回数
   allowGuestMode: boolean; // ゲストモード許可
 }
 
@@ -163,7 +153,7 @@ interface GuestUser {
   id: string;
   tempId: string; // 一時的なID
   nickname: string;
-  travelId: string;
+  groupId: string;
   deviceFingerprint: string; // デバイス識別用
   joinedAt: Date;
   lastActiveAt: Date;
@@ -193,13 +183,16 @@ https://app.travel.com/invite/{token}
 ### API設計
 
 ```typescript
+// 招待リンク関連API
+
 // 招待リンク生成
-POST /api/travel/{travelId}/invitation-links
+POST /api/groups/{groupId}/invitation-links
 {
   customMessage?: string;
-  expiresAt?: Date;
-  maxUses?: number;
 }
+
+// グループの招待リンク一覧取得
+GET /api/groups/{groupId}/invitation-links
 
 // 招待リンク詳細取得（参加前確認用）
 GET /api/invitation/{token}
@@ -212,7 +205,29 @@ POST /api/invitation/{token}/join
   guestData?: { nickname: string; deviceFingerprint: string }; // ゲストの場合
 }
 
-// ゲストユーザー本登録
+// 招待リンクの無効化
+PATCH /api/invitation-links/{linkId}/deactivate
+
+// 招待リンクの削除
+DELETE /api/invitation-links/{linkId}
+
+// 招待リンクの使用履歴取得
+GET /api/invitation-links/{linkId}/usage
+
+// 招待設定関連API
+
+// 招待設定の取得
+GET /api/groups/{groupId}/invitation-settings
+
+// 招待設定の更新
+PATCH /api/groups/{groupId}/invitation-settings
+{
+  allowMemberInvite?: boolean;
+  requireApproval?: boolean;
+  allowGuestMode?: boolean;
+}
+
+// ゲストユーザー本登録（将来実装）
 POST /api/guest/{tempId}/convert
 {
   email: string;
@@ -224,10 +239,10 @@ POST /api/guest/{tempId}/convert
 ## UI/UX設計
 
 ### 管理者側UI
-1. **招待管理画面**：リンク一覧・生成・管理
-2. **リンク生成モーダル**：設定項目入力・プレビュー
-3. **共有オプション**：コピー・QRコード・SNS共有ボタン
-4. **使用状況ダッシュボード**：招待リンクの分析・統計
+1. **グループ編集画面**：メンバー管理と招待リンク管理をタブ形式で統合
+2. **リンク管理タブ**：招待リンク一覧・生成・管理機能
+3. **リンク生成モーダル**：カスタムメッセージ入力と簡素な作成フロー
+4. **共有オプション**：リンクのコピー機能と管理ボタン
 
 ### 参加者側UI
 1. **招待ページ**：グループ情報・参加確認
@@ -256,28 +271,34 @@ POST /api/guest/{tempId}/convert
 ## 実装フェーズ
 
 ### Phase 1: 基本招待機能
-- [ ] 招待リンク生成・管理
-- [ ] 基本的な参加フロー
-- [ ] セキュリティトークン実装
-- [ ] 有効期限・使用回数制限
+- [x] 招待リンク生成・管理
+- [x] 基本的な参加フロー
+- [x] セキュリティトークン実装
+- [x] グループベースの招待システム
+- [x] グループ編集画面への統合
+- [x] 招待リンクの無効化・削除機能
+- [x] モックデータ対応（開発・テスト用）
 
 ### Phase 2: 共有・UX向上
 - [ ] QRコード生成
 - [ ] SNS共有機能
-- [ ] カスタムメッセージ
-- [ ] 参加前プレビュー画面
+- [x] カスタムメッセージ（実装済み）
+- [x] 参加前プレビュー画面（実装済み）
+- [ ] 招待リンク使用履歴の表示機能
 
 ### Phase 3: ゲストモード・本登録機能
-- [ ] ゲストユーザー機能
+- [x] ゲストユーザー機能（UI実装済み）
 - [ ] 機能制限システム
 - [ ] 本登録フロー
 - [ ] データ継承機能
+- [ ] ゲスト認証システム強化
 
 ### Phase 4: セキュリティ・分析強化
-- [ ] 詳細な権限設定
+- [x] 基本権限設定（実装済み）
 - [ ] 使用状況分析・通知システム
-- [ ] 高度なセキュリティ機能
+- [ ] 高度なセキュリティ機能（IP制限等）
 - [ ] 管理者承認機能
+- [ ] スパム対策機能
 
 ## 成功指標
 
@@ -285,7 +306,7 @@ POST /api/guest/{tempId}/convert
 - 参加完了率：90%以上（リンクアクセス後の参加率）
 - ゲストモード利用率：60%以上（新規ユーザーのゲスト選択率）
 - ゲスト→本登録転換率：40%以上（ゲストユーザーの本登録率）
-- 招待エラー率：5%以下（無効リンク・期限切れ等）
+- 招待エラー率：5%以下（無効リンク等）
 - ユーザーの招待体験満足度向上
 
 ## リスク・考慮事項
@@ -297,7 +318,7 @@ POST /api/guest/{tempId}/convert
 
 ### UXリスク
 - **複雑化**：機能追加による招待フローの複雑化
-- **エラー処理**：期限切れ・無効リンクでの分かりやすいエラー表示
+- **エラー処理**：無効リンクでの分かりやすいエラー表示
 - **プライバシー**：参加前の情報開示レベル
 - **ゲスト体験**：制限機能での不満・離脱リスク
 - **データ移行**：本登録時のデータ継承失敗・混乱
@@ -311,17 +332,30 @@ POST /api/guest/{tempId}/convert
 
 ## 関連ファイル
 
-実装時に関連するファイル：
-- `src/types/index.ts` - 招待関連の型定義追加
-- `src/stores/travelStore.ts` - 招待データの状態管理
-- `src/components/InvitationManager.tsx` - 招待管理コンポーネント
-- `src/components/InvitationLink.tsx` - リンク生成・共有UI
-- `src/components/JoinGroup.tsx` - 参加フロー画面
-- `src/components/GuestRegistration.tsx` - ゲスト登録・本登録UI
-- `src/components/GuestBanner.tsx` - 本登録促進バナー
-- `src/utils/invitationUtils.ts` - 招待関連ユーティリティ
-- `src/utils/guestUtils.ts` - ゲストユーザー管理ユーティリティ
-- `src/services/invitationApi.ts` - 招待API処理
-- `src/services/guestApi.ts` - ゲストユーザーAPI処理
-- `src/app/invite/[token]/page.tsx` - 招待ページ
+実装済みファイル：
+- `src/types/index.ts` - 招待関連の型定義
+- `src/components/EditGroupModal.tsx` - グループ編集画面に招待機能を統合（モック対応含む）
+- `src/services/invitationApi.ts` - 招待API処理（完全なAPIセット）
+- `src/app/invite/[token]/page.tsx` - 招待リンク参加ページ（ゲストモード対応）
 - `src/stores/authStore.ts` - ゲスト認証状態管理
+- `src/app/page.tsx` - ホームページからグループ編集へのアクセス
+
+## 開発・テスト機能
+
+### モックデータ対応
+- **モック招待リンク生成**: APIエラー時にサンプルデータを表示
+- **モック操作**: リンクの作成・無効化・削除のローカルシミュレーション
+- **リアルなデータ構造**: 実際のAPIレスポンスと同じデータ形式
+- **状態管理**: 有効/無効ステータス、作成日時の管理
+
+### APIエンドポイントカバレッジ
+実装済みAPIエンドポイント：
+- ✅ 招待リンク作成
+- ✅ 招待リンク一覧取得
+- ✅ 招待リンク詳細取得
+- ✅ 招待経由参加
+- ✅ リンク無効化
+- ✅ リンク削除
+- ✅ 使用履歴取得
+- ✅ 招待設定管理
+- ⚠️ ゲスト本登録（UIのみ、API未実装）

@@ -114,3 +114,87 @@ export interface ImageUploadOptions {
   maxHeight?: number;
   enableCompression: boolean;
 }
+
+// 招待リンク関連の型定義
+export interface InvitationLink {
+  id: string;
+  groupId: string;
+  token: string; // セキュアなランダムトークン
+  createdBy: string; // User ID
+  customMessage?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InvitationUsage {
+  id: string;
+  invitationLinkId: string;
+  userId: string;
+  usedAt: Date;
+  success: boolean;
+}
+
+export interface InvitationSettings {
+  id: string;
+  groupId: string;
+  allowMemberInvite: boolean; // 一般メンバーの招待権限
+  requireApproval: boolean; // 管理者承認が必要か
+  allowGuestMode: boolean; // ゲストモード許可
+}
+
+export interface GuestUser {
+  id: string;
+  tempId: string; // 一時的なID
+  nickname: string;
+  groupId: string;
+  deviceFingerprint: string; // デバイス識別用
+  joinedAt: Date;
+  lastActiveAt: Date;
+  isConverted: boolean; // 本登録済みかどうか
+  convertedUserId?: string; // 本登録後のユーザーID
+  permissions: GuestPermission[];
+}
+
+export interface GuestPermission {
+  action: string; // 'read', 'comment', 'edit_wishlist' etc.
+  allowed: boolean;
+  resource?: string; // 対象リソース
+}
+
+// 招待リンク作成リクエスト
+export interface CreateInvitationLinkRequest {
+  customMessage?: string;
+}
+
+// 招待リンク参加リクエスト
+export interface JoinInvitationRequest {
+  userId?: string; // 既存ユーザーの場合
+  userData?: UserRegistrationData; // 新規ユーザーの場合
+  guestData?: { nickname: string; deviceFingerprint: string }; // ゲストの場合
+}
+
+// ユーザー登録データ
+export interface UserRegistrationData {
+  email: string;
+  password: string;
+  name: string;
+}
+
+// ゲストユーザー本登録リクエスト
+export interface ConvertGuestRequest {
+  email: string;
+  password: string;
+  name?: string;
+}
+
+// 招待リンク詳細（参加前確認用）
+export interface InvitationDetails {
+  token: string;
+  group: TravelGroup;
+  travels: Travel[]; // グループに関連する旅行一覧
+  inviter: User;
+  customMessage?: string;
+  memberCount: number;
+  isValid: boolean;
+}

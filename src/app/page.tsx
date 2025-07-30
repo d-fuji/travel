@@ -120,16 +120,18 @@ export default function Home() {
                         <span>{group.members.length}人</span>
                       </div>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedGroupId(group.id);
-                        setShowCreateTravel(true);
-                      }}
-                      className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100"
-                    >
-                      旅行作成
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedGroupId(group.id);
+                          setShowCreateTravel(true);
+                        }}
+                        className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100"
+                      >
+                        旅行作成
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -238,6 +240,7 @@ export default function Home() {
           group={selectedGroup}
         />
       )}
+
     </Layout>
   );
 }

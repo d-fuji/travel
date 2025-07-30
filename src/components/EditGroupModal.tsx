@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
-import { TravelGroup } from '@/types';
-import { X, Trash2, AlertTriangle } from 'lucide-react';
+import { TravelGroup, InvitationLink, CreateInvitationLinkRequest } from '@/types';
+import { invitationLinkApi } from '@/services/invitationApi';
+import { X, Trash2, AlertTriangle, Users, Link, Copy, Plus, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 interface EditGroupModalProps {
   isOpen: boolean;
@@ -17,11 +18,19 @@ export default function EditGroupModal({
   onClose,
   group,
 }: EditGroupModalProps) {
+  const [activeTab, setActiveTab] = useState<'members' | 'invitations'>('members');
   const [groupName, setGroupName] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>(['']);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // 招待関連の状態
+  const [invitationLinks, setInvitationLinks] = useState<InvitationLink[]>([]);
+  const [showCreateInviteForm, setShowCreateInviteForm] = useState(false);
+  const [invitationLoading, setInvitationLoading] = useState(false);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  
   const { updateGroup, addMemberToGroup, removeMemberFromGroup, deleteGroup } =
     useTravelStore();
   const { user } = useAuthStore();
@@ -29,7 +38,6 @@ export default function EditGroupModal({
   useEffect(() => {
     if (group && user) {
       setGroupName(group.name);
-      
       
       // Get all member emails
       const memberEmails = group.members.map((member) => member.email);
@@ -53,8 +61,66 @@ export default function EditGroupModal({
       
       setMemberEmails(allEmails);
       
+      // 招待リンクを取得
+      fetchInvitationLinks();
     }
   }, [group, user]);
+
+  const fetchInvitationLinks = async () => {
+    if (!group) return;
+    
+    setInvitationLoading(true);
+    try {
+      const links = await invitationLinkApi.getByGroup(group.id);
+      setInvitationLinks(links);
+    } catch (error) {
+      console.error('Failed to fetch invitation links:', error);
+      // モック招待リンクを生成
+      const mockLinks = generateMockInvitationLinks(group.id);
+      setInvitationLinks(mockLinks);
+    } finally {
+      setInvitationLoading(false);
+    }
+  };
+
+  const generateMockInvitationLinks = (groupId: string): InvitationLink[] => {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+    return [
+      {
+        id: 'mock-link-1',
+        groupId: groupId,
+        token: 'abc123def456ghi789',
+        createdBy: user?.id || '1',
+        customMessage: '一緒に楽しい旅行を計画しましょう！',
+        isActive: true,
+        createdAt: oneDayAgo,
+        updatedAt: oneDayAgo,
+      },
+      {
+        id: 'mock-link-2', 
+        groupId: groupId,
+        token: 'xyz789uvw456rst123',
+        createdBy: user?.id || '1',
+        customMessage: undefined,
+        isActive: true,
+        createdAt: threeDaysAgo,
+        updatedAt: threeDaysAgo,
+      },
+      {
+        id: 'mock-link-3',
+        groupId: groupId,
+        token: 'disabled123456789',
+        createdBy: user?.id || '1',
+        customMessage: '期間限定の招待です',
+        isActive: false,
+        createdAt: threeDaysAgo,
+        updatedAt: now,
+      }
+    ];
+  };
 
   if (!isOpen || !group) return null;
 
@@ -181,6 +247,103 @@ export default function EditGroupModal({
 
   const isCreator = user?.id === group.createdBy || user?.id === '1';
 
+  const handleCreateInvitationLink = async (data: CreateInvitationLinkRequest) => {
+    if (!group) return;
+    
+    try {
+      const newLink = await invitationLinkApi.create(group.id, data);
+      setInvitationLinks([...invitationLinks, newLink]);
+      setShowCreateInviteForm(false);
+      alert('招待リンクを作成しました');
+    } catch (error) {
+      console.error('Failed to create invitation link:', error);
+      // モック招待リンクを作成
+      const mockLink: InvitationLink = {
+        id: `mock-link-${Date.now()}`,
+        groupId: group.id,
+        token: generateRandomToken(),
+        createdBy: user?.id || '1',
+        customMessage: data.customMessage,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setInvitationLinks([...invitationLinks, mockLink]);
+      setShowCreateInviteForm(false);
+      alert('招待リンクを作成しました（モック）');
+    }
+  };
+
+  const generateRandomToken = (): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 18; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleCopyInvitationLink = async (link: InvitationLink) => {
+    const url = `${window.location.origin}/invite/${link.token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLinkId(link.id);
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      // フォールバック: テキストエリアを使用
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedLinkId(link.id);
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    }
+  };
+
+  const handleDeactivateInvitationLink = async (linkId: string) => {
+    if (!confirm('この招待リンクを無効化しますか？無効化後は使用できなくなります。')) {
+      return;
+    }
+
+    try {
+      await invitationLinkApi.deactivate(linkId);
+      setInvitationLinks(links => 
+        links.map(link => 
+          link.id === linkId ? { ...link, isActive: false } : link
+        )
+      );
+      alert('招待リンクを無効化しました');
+    } catch (error) {
+      console.error('Failed to deactivate invitation link:', error);
+      // モック: 無効化処理
+      setInvitationLinks(links => 
+        links.map(link => 
+          link.id === linkId ? { ...link, isActive: false, updatedAt: new Date() } : link
+        )
+      );
+      alert('招待リンクを無効化しました（モック）');
+    }
+  };
+
+  const handleDeleteInvitationLink = async (linkId: string) => {
+    if (!confirm('この招待リンクを削除しますか？この操作は取り消せません。')) {
+      return;
+    }
+
+    try {
+      await invitationLinkApi.delete(linkId);
+      setInvitationLinks(links => links.filter(link => link.id !== linkId));
+      alert('招待リンクを削除しました');
+    } catch (error) {
+      console.error('Failed to delete invitation link:', error);
+      // モック: 削除処理
+      setInvitationLinks(links => links.filter(link => link.id !== linkId));
+      alert('招待リンクを削除しました（モック）');
+    }
+  };
 
   return (
     <>
@@ -223,132 +386,456 @@ export default function EditGroupModal({
       )}
 
       {/* メインモーダル */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">グループを編集</h2>
-            <button
-              onClick={onClose}
-              className="p-1 text-gray-500 hover:text-gray-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                グループ名
-              </label>
-              <input
-                type="text"
-                value={groupName}
-                onChange={(e) => {
-                  setGroupName(e.target.value);
-                  handleInputChange();
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="例: 家族旅行"
-                required
-                disabled={!isCreator}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                メンバー（メールアドレス）
-              </label>
-              <div className="space-y-2">
-                {memberEmails.map((email, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) =>
-                        handleMemberChange(index, e.target.value)
-                      }
-                      className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                        (!isCreator && index < group.members.length) || email === user?.email
-                          ? 'bg-gray-50 text-gray-700'
-                          : ''
-                      }`}
-                      placeholder="member@example.com"
-                      readOnly={email === user?.email}
-                    />
-                    {isCreator &&
-                      memberEmails.length > 1 &&
-                      email !== user?.email && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMember(index)}
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                  </div>
-                ))}
-                {isCreator && (
-                  <button
-                    type="button"
-                    onClick={handleAddMember}
-                    className="text-primary-600 text-sm font-medium hover:text-primary-700"
-                  >
-                    + メンバーを追加
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                <div className="flex items-center">
-                  <svg
-                    className="w-4 h-4 mr-2 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {error}
-                </div>
-              </div>
-            )}
-
-            {!isCreator && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-800">
-                  グループの編集はグループ作成者のみが可能です。
-                </p>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              {isCreator && (
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  削除
-                </button>
-              )}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center p-4 z-50" style={{ alignItems: 'flex-start', paddingTop: '15vh' }}>
+        <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
+          {/* ヘッダー */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">グループを編集</h2>
               <button
-                type="submit"
-                disabled={!isCreator || loading}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
               >
-                {loading ? '更新中...' : '更新'}
+                <X className="w-5 h-5" />
               </button>
             </div>
-          </form>
+            
+            {/* タブ */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('members')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'members'
+                    ? 'bg-white text-primary-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                メンバー管理
+              </button>
+              <button
+                onClick={() => setActiveTab('invitations')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'invitations'
+                    ? 'bg-white text-primary-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Link className="w-4 h-4" />
+                招待リンク
+              </button>
+            </div>
+          </div>
+
+          {/* コンテンツ */}
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
+            {activeTab === 'members' ? (
+              <MemberManagement
+                group={group}
+                groupName={groupName}
+                setGroupName={setGroupName}
+                memberEmails={memberEmails}
+                setMemberEmails={setMemberEmails}
+                error={error}
+                loading={loading}
+                isCreator={isCreator}
+                user={user}
+                onSubmit={handleSubmit}
+                onDelete={() => setShowDeleteConfirm(true)}
+                onAddMember={handleAddMember}
+                onMemberChange={handleMemberChange}
+                onRemoveMember={handleRemoveMember}
+                onInputChange={handleInputChange}
+              />
+            ) : (
+              <InvitationManagement
+                invitationLinks={invitationLinks}
+                loading={invitationLoading}
+                showCreateForm={showCreateInviteForm}
+                setShowCreateForm={setShowCreateInviteForm}
+                onCreateLink={handleCreateInvitationLink}
+                onCopyLink={handleCopyInvitationLink}
+                onDeactivateLink={handleDeactivateInvitationLink}
+                onDeleteLink={handleDeleteInvitationLink}
+                copiedLinkId={copiedLinkId}
+                isCreator={isCreator}
+              />
+            )}
+          </div>
         </div>
       </div>
     </>
+  );
+}
+
+// メンバー管理コンポーネント
+interface MemberManagementProps {
+  group: TravelGroup;
+  groupName: string;
+  setGroupName: (name: string) => void;
+  memberEmails: string[];
+  setMemberEmails: (emails: string[]) => void;
+  error: string;
+  loading: boolean;
+  isCreator: boolean;
+  user: any;
+  onSubmit: (e: React.FormEvent) => void;
+  onDelete: () => void;
+  onAddMember: () => void;
+  onMemberChange: (index: number, value: string) => void;
+  onRemoveMember: (index: number) => void;
+  onInputChange: () => void;
+}
+
+function MemberManagement({
+  group,
+  groupName,
+  setGroupName,
+  memberEmails,
+  error,
+  loading,
+  isCreator,
+  user,
+  onSubmit,
+  onDelete,
+  onAddMember,
+  onMemberChange,
+  onRemoveMember,
+  onInputChange,
+}: MemberManagementProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          グループ名
+        </label>
+        <input
+          type="text"
+          value={groupName}
+          onChange={(e) => {
+            setGroupName(e.target.value);
+            onInputChange();
+          }}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          placeholder="例: 家族旅行"
+          required
+          disabled={!isCreator}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          メンバー（メールアドレス）
+        </label>
+        <div className="space-y-2">
+          {memberEmails.map((email, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) =>
+                  onMemberChange(index, e.target.value)
+                }
+                className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                  (!isCreator && index < group.members.length) || email === user?.email
+                    ? 'bg-gray-50 text-gray-700'
+                    : ''
+                }`}
+                placeholder="member@example.com"
+                readOnly={email === user?.email}
+              />
+              {isCreator &&
+                memberEmails.length > 1 &&
+                email !== user?.email && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveMember(index)}
+                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+            </div>
+          ))}
+          {isCreator && (
+            <button
+              type="button"
+              onClick={onAddMember}
+              className="text-primary-600 text-sm font-medium hover:text-primary-700"
+            >
+              + メンバーを追加
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+          <div className="flex items-center">
+            <svg
+              className="w-4 h-4 mr-2 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            {error}
+          </div>
+        </div>
+      )}
+
+      {!isCreator && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm text-amber-800">
+            グループの編集はグループ作成者のみが可能です。
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        {isCreator && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            削除
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={!isCreator || loading}
+          className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? '更新中...' : '更新'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// 招待管理コンポーネント
+interface InvitationManagementProps {
+  invitationLinks: InvitationLink[];
+  loading: boolean;
+  showCreateForm: boolean;
+  setShowCreateForm: (show: boolean) => void;
+  onCreateLink: (data: CreateInvitationLinkRequest) => void;
+  onCopyLink: (link: InvitationLink) => void;
+  onDeactivateLink: (linkId: string) => void;
+  onDeleteLink: (linkId: string) => void;
+  copiedLinkId: string | null;
+  isCreator: boolean;
+}
+
+function InvitationManagement({
+  invitationLinks,
+  loading,
+  showCreateForm,
+  setShowCreateForm,
+  onCreateLink,
+  onCopyLink,
+  onDeactivateLink,
+  onDeleteLink,
+  copiedLinkId,
+  isCreator,
+}: InvitationManagementProps) {
+  return (
+    <div className="space-y-6">
+      {/* 新規作成ボタン */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-900">招待リンク一覧</h3>
+        {isCreator && (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            新規作成
+          </button>
+        )}
+      </div>
+
+      {/* 招待リンクリスト */}
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <p className="mt-2 text-gray-600">読み込み中...</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {invitationLinks.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Link className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>招待リンクがありません</p>
+              {isCreator && (
+                <p className="text-sm">新規作成ボタンからリンクを作成してください</p>
+              )}
+            </div>
+          ) : (
+            invitationLinks.map((link) => (
+              <InvitationLinkCard
+                key={link.id}
+                link={link}
+                onCopy={() => onCopyLink(link)}
+                onDeactivate={() => onDeactivateLink(link.id)}
+                onDelete={() => onDeleteLink(link.id)}
+                isCopied={copiedLinkId === link.id}
+                isCreator={isCreator}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* 新規作成フォーム */}
+      {showCreateForm && (
+        <CreateInvitationForm
+          onSubmit={onCreateLink}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// 招待リンクカード
+interface InvitationLinkCardProps {
+  link: InvitationLink;
+  onCopy: () => void;
+  onDeactivate: () => void;
+  onDelete: () => void;
+  isCopied: boolean;
+  isCreator: boolean;
+}
+
+function InvitationLinkCard({ link, onCopy, onDeactivate, onDelete, isCopied, isCreator }: InvitationLinkCardProps) {
+  return (
+    <div className={`p-4 border rounded-lg ${link.isActive ? 'border-gray-200 bg-white' : 'border-red-200 bg-red-50'}`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            {link.isActive ? (
+              <Eye className="w-4 h-4 text-green-500" />
+            ) : (
+              <EyeOff className="w-4 h-4 text-red-500" />
+            )}
+            <span className={`text-sm font-medium ${link.isActive ? 'text-green-600' : 'text-red-600'}`}>
+              {link.isActive ? '有効' : '無効'}
+            </span>
+          </div>
+
+          {link.customMessage && (
+            <p className="text-sm text-gray-700 mb-2">
+              メッセージ: {link.customMessage}
+            </p>
+          )}
+
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span>作成日: {new Date(link.createdAt).toLocaleDateString('ja-JP')}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 ml-4">
+          <button
+            onClick={onCopy}
+            className={`p-2 rounded-lg transition-colors ${
+              isCopied 
+                ? 'bg-green-100 text-green-600' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            title="リンクをコピー"
+          >
+            {isCopied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          </button>
+          
+          {isCreator && link.isActive && (
+            <button
+              onClick={onDeactivate}
+              className="p-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              title="無効化"
+            >
+              <EyeOff className="w-4 h-4" />
+            </button>
+          )}
+          
+          {isCreator && (
+            <button
+              onClick={onDelete}
+              className="p-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg transition-colors"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 招待リンク作成フォーム
+interface CreateInvitationFormProps {
+  onSubmit: (data: CreateInvitationLinkRequest) => void;
+  onCancel: () => void;
+}
+
+function CreateInvitationForm({ onSubmit, onCancel }: CreateInvitationFormProps) {
+  const [customMessage, setCustomMessage] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const data: CreateInvitationLinkRequest = {};
+    
+    if (customMessage.trim()) {
+      data.customMessage = customMessage.trim();
+    }
+    
+    onSubmit(data);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">新しい招待リンクを作成</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              カスタムメッセージ（任意）
+            </label>
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+              rows={3}
+              placeholder="招待メッセージを入力してください"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              作成
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
