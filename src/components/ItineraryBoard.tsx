@@ -400,6 +400,7 @@ function ItineraryItemCard({
           <div className="mt-3">
             <ItineraryImageGallery
               images={item.images || []}
+              itineraryItemId={item.id}
               displayMode={item.imageDisplayMode || 'thumbnail'}
               canEdit={true}
               onImagesChange={(images) => {

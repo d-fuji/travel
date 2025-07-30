@@ -1,7 +1,7 @@
 import { ItineraryImage } from '@/types';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // axiosインスタンスの作成
 const imageApiClient = axios.create({
@@ -26,26 +26,26 @@ export const imageApi = {
     files: File[]
   ): Promise<ItineraryImage[]> => {
     const formData = new FormData();
-    
+
     // 複数ファイルを追加
     files.forEach(file => {
       formData.append('images', file);
     });
-    
+
     formData.append('itineraryItemId', itineraryItemId);
-    
+
     const userId = localStorage.getItem('userId');
     if (userId) {
       formData.append('userId', userId);
     }
-    
+
     try {
       const response = await imageApiClient.post('/images/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
+
       return response.data.images || [];
     } catch (error) {
       console.error('Image upload failed:', error);

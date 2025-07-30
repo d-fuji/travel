@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Image as ImageIcon, Grid3x3, List, Eye } from 'lucide-react';
 import { ItineraryImage } from '@/types';
 import ImageUploader from './ImageUploader';
 import ImageViewer from './ImageViewer';
+import { imageApi } from '@/services/imageApi';
 
 interface ItineraryImageGalleryProps {
   images: ItineraryImage[];
+  itineraryItemId: string;
   displayMode?: 'thumbnail' | 'full' | 'grid';
   canEdit?: boolean;
   onImagesChange?: (images: ItineraryImage[]) => void;
@@ -15,6 +17,7 @@ interface ItineraryImageGalleryProps {
 
 export default function ItineraryImageGallery({
   images = [],
+  itineraryItemId,
   displayMode = 'thumbnail',
   canEdit = false,
   onImagesChange,
@@ -23,101 +26,71 @@ export default function ItineraryImageGallery({
   const [showViewer, setShowViewer] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [currentDisplayMode, setCurrentDisplayMode] = useState(displayMode);
+  const [loadedImages, setLoadedImages] = useState<ItineraryImage[]>(images);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // モック画像データ（実際のAPIが無い間の表示用）
-  const mockImages: ItineraryImage[] = images.length > 0 ? images : [
-    {
-      id: 'mock-1',
-      itineraryItemId: 'item-1',
-      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=150&fit=crop',
-      originalFileName: 'beautiful-mountain.jpg',
-      mimeType: 'image/jpeg',
-      fileSize: 2048000,
-      width: 800,
-      height: 600,
-      caption: '美しい山の景色',
-      altText: '雪をかぶった山々の風景',
-      order: 0,
-      isMain: true,
-      uploadedBy: 'user-1',
-      uploadedAt: new Date(),
-    },
-    {
-      id: 'mock-2',
-      itineraryItemId: 'item-1',
-      url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=200&h=150&fit=crop',
-      originalFileName: 'nature-lake.jpg',
-      mimeType: 'image/jpeg',
-      fileSize: 1536000,
-      width: 800,
-      height: 600,
-      caption: '静かな湖',
-      order: 1,
-      isMain: false,
-      uploadedBy: 'user-1',
-      uploadedAt: new Date(),
-    },
-  ];
-
-  const displayImages = mockImages;
-
-  const handleImagesSelected = (files: File[]) => {
-    // 実際のAPIでは、ここでファイルアップロードを行う
-    console.log('Selected files:', files);
-    // モック: ファイルを画像オブジェクトに変換
-    const newImages = files.map((file, index) => ({
-      id: `upload-${Date.now()}-${index}`,
-      itineraryItemId: 'current-item-id',
-      url: URL.createObjectURL(file),
-      thumbnailUrl: URL.createObjectURL(file),
-      originalFileName: file.name,
-      mimeType: file.type,
-      fileSize: file.size,
-      width: 0, // 実際のAPIでは画像読み込み後に設定
-      height: 0,
-      order: displayImages.length + index,
-      isMain: displayImages.length === 0 && index === 0,
-      uploadedBy: 'current-user-id',
-      uploadedAt: new Date(),
-    }));
-    
-    if (onImagesChange) {
-      onImagesChange([...displayImages, ...newImages]);
-    }
-  };
-
-  const handleUrlAdded = (url: string) => {
-    // 実際のAPIでは、URLから画像情報を取得
-    console.log('Added URL:', url);
-    const newImage: ItineraryImage = {
-      id: `url-${Date.now()}`,
-      itineraryItemId: 'current-item-id',
-      url: url,
-      thumbnailUrl: url,
-      originalFileName: 'image-from-url',
-      mimeType: 'image/jpeg',
-      fileSize: 0,
-      width: 0,
-      height: 0,
-      order: displayImages.length,
-      isMain: displayImages.length === 0,
-      uploadedBy: 'current-user-id',
-      uploadedAt: new Date(),
+  // 画像を取得
+  useEffect(() => {
+    const fetchImages = async () => {
+      if (!itineraryItemId) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        const fetchedImages = await imageApi.getImages(itineraryItemId);
+        setLoadedImages(fetchedImages || []);
+        if (onImagesChange) {
+          onImagesChange(fetchedImages || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch images:', error);
+        setLoadedImages([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    
-    if (onImagesChange) {
-      onImagesChange([...displayImages, newImage]);
+
+    fetchImages();
+  }, [itineraryItemId]);
+
+  const displayImages = loadedImages;
+
+  const handleImagesSelected = async (files: File[]) => {
+    try {
+      const uploadedImages = await imageApi.uploadImages(itineraryItemId, files);
+      const updatedImages = [...displayImages, ...uploadedImages];
+      setLoadedImages(updatedImages);
+      
+      if (onImagesChange) {
+        onImagesChange(updatedImages);
+      }
+    } catch (error) {
+      console.error('Failed to upload images:', error);
+      alert('画像のアップロードに失敗しました');
     }
   };
 
+  const handleUrlAdded = async (url: string) => {
+    // URL画像の追加はAPIにない機能なので、とりあえず無効化
+    console.log('URL画像の追加は現在サポートされていません:', url);
+    alert('URL画像の追加は現在サポートされていません');
+  };
 
-  const handleImageDelete = (imageId: string) => {
-    console.log('Delete image:', imageId);
-    if (onImagesChange) {
+
+  const handleImageDelete = async (imageId: string) => {
+    try {
+      await imageApi.deleteImage(imageId);
       const filteredImages = displayImages.filter(img => img.id !== imageId);
-      onImagesChange(filteredImages);
+      setLoadedImages(filteredImages);
+      
+      if (onImagesChange) {
+        onImagesChange(filteredImages);
+      }
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+      alert('画像の削除に失敗しました');
     }
   };
 
@@ -125,6 +98,14 @@ export default function ItineraryImageGallery({
     setViewerIndex(index);
     setShowViewer(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="text-sm text-gray-500">画像を読み込み中...</div>
+      </div>
+    );
+  }
 
   if (displayImages.length === 0 && !canEdit) {
     return null;
@@ -228,17 +209,6 @@ export default function ItineraryImageGallery({
         )}
       </div>
 
-      {/* 画像がない場合の初期表示 */}
-      {displayImages.length === 0 && canEdit && (
-        <div 
-          onClick={() => setShowUploader(true)}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 cursor-pointer transition-colors"
-        >
-          <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">画像を追加</p>
-          <p className="text-xs text-gray-500">クリックして画像をアップロード</p>
-        </div>
-      )}
 
       {/* モーダルコンポーネント */}
       <ImageUploader
