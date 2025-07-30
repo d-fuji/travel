@@ -424,12 +424,19 @@ export const useTravelStore = create<TravelState>()(
 
       updateItineraryItem: async (id: string, updates) => {
         try {
-          const updatedItem = await itineraryApi.update(id, updates);
-          set((state) => ({
-            itineraryItems: state.itineraryItems.map((item) =>
-              item.id === id ? updatedItem : item
-            ),
-          }));
+          // imagesプロパティを除外してAPIに送信
+          const { images, ...apiUpdates } = updates;
+          
+          // images以外のプロパティがある場合のみAPIを呼び出し
+          if (Object.keys(apiUpdates).length > 0) {
+            const updatedItem = await itineraryApi.update(id, apiUpdates);
+            set((state) => ({
+              itineraryItems: state.itineraryItems.map((item) =>
+                item.id === id ? updatedItem : item
+              ),
+            }));
+          }
+          // imagesのみの更新の場合は何もしない（将来的にAPI実装予定）
         } catch (error) {
           console.error('Failed to update itinerary item:', error);
           throw error;

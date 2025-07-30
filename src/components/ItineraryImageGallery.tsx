@@ -55,7 +55,15 @@ export default function ItineraryImageGallery({
     fetchImages();
   }, [itineraryItemId]);
 
-  const displayImages = loadedImages;
+  const displayImages = loadedImages || [];
+
+  // デバッグ用ログ
+  console.log('ItineraryImageGallery debug:', {
+    loadedImages,
+    displayImages,
+    isLoading,
+    itineraryItemId
+  });
 
   const handleImagesSelected = async (files: File[]) => {
     try {
@@ -149,7 +157,7 @@ export default function ItineraryImageGallery({
           ? 'flex gap-2 overflow-x-auto pb-2'
           : 'space-y-2'
       }`}>
-        {displayImages.map((image, index) => (
+        {Array.isArray(displayImages) && displayImages.map((image, index) => (
           <div
             key={image.id}
             className={`relative group cursor-pointer ${
@@ -220,7 +228,7 @@ export default function ItineraryImageGallery({
       />
 
       <ImageViewer
-        images={displayImages}
+        images={Array.isArray(displayImages) ? displayImages : []}
         initialIndex={viewerIndex}
         isOpen={showViewer}
         onClose={() => setShowViewer(false)}
