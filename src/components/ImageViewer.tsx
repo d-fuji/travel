@@ -23,6 +23,10 @@ export default function ImageViewer({
 }: ImageViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showControls, setShowControls] = useState(true);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
 
   if (!isOpen || images.length === 0) return null;
 
@@ -40,6 +44,52 @@ export default function ImageViewer({
     if (e.key === 'ArrowRight') nextImage();
     if (e.key === 'ArrowLeft') prevImage();
     if (e.key === 'Escape') onClose();
+  };
+
+  // フリック判定のための最小距離
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setDragOffset(0);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    
+    // ドラッグオフセットを計算（画面幅の割合として）
+    const offset = currentTouch - touchStart;
+    const maxOffset = window.innerWidth * 0.3; // 最大30%まで移動
+    const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, offset));
+    setDragOffset(clampedOffset);
+  };
+
+  const onTouchEnd = () => {
+    setIsDragging(false);
+    setDragOffset(0);
+    
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (images.length > 1) {
+      if (isLeftSwipe) {
+        nextImage(); // 左フリックで次の画像
+      } else if (isRightSwipe) {
+        prevImage(); // 右フリックで前の画像
+      }
+    }
+
+    // リセット
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   return (
@@ -90,15 +140,35 @@ export default function ImageViewer({
 
       {/* 画像表示 */}
       <div 
-        className="relative max-w-full max-h-full p-4"
+        className="relative w-full h-full p-2 md:p-4"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        <img
-          src={currentImage.url}
-          alt={currentImage.altText || currentImage.caption || '画像'}
-          className="max-w-full max-h-[80vh] object-contain rounded-lg"
-          loading="lazy"
-        />
+        <div 
+          className={`w-full h-full ${isDragging ? '' : 'transition-transform duration-200'}`}
+          style={{ 
+            transform: `translateX(${dragOffset}px)`,
+            opacity: isDragging ? Math.max(0.5, 1 - Math.abs(dragOffset) / (window.innerWidth * 0.3)) : 1
+          }}
+        >
+          <img
+            src={currentImage.url}
+            alt={currentImage.altText || currentImage.caption || '画像'}
+            className="w-full h-full max-w-full max-h-full object-contain"
+            loading="lazy"
+          />
+        </div>
+
+        {/* フリック方向のインジケーター */}
+        {isDragging && Math.abs(dragOffset) > 20 && (
+          <div className={`absolute top-1/2 -translate-y-1/2 text-white text-opacity-70 text-sm ${
+            dragOffset > 0 ? 'left-4' : 'right-4'
+          }`}>
+            {dragOffset > 0 ? '← 前の画像' : '次の画像 →'}
+          </div>
+        )}
 
         {/* 画像情報 */}
         {currentImage.caption && (

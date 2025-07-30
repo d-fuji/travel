@@ -154,11 +154,10 @@ export default function ItineraryBoard({
               className="bg-white rounded-2xl shadow-sm border"
             >
               <div
-                className={`p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors ${
-                  isCollapsed 
-                    ? 'rounded-2xl' 
-                    : 'border-b rounded-t-2xl'
-                }`}
+                className={`p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors ${isCollapsed
+                  ? 'rounded-2xl'
+                  : 'border-b rounded-t-2xl'
+                  }`}
                 onClick={() => toggleDateCollapse(dateStr)}
               >
                 <div className="flex items-center justify-between">
@@ -337,13 +336,13 @@ function ItineraryItemCard({
         <div className="flex gap-2 mt-3">
           <button
             onClick={() =>
-              onSave({ 
-                title, 
-                description, 
-                location, 
-                locationUrl: locationUrl.trim() || undefined, 
-                startTime, 
-                endTime 
+              onSave({
+                title,
+                description,
+                location,
+                locationUrl: locationUrl.trim() || undefined,
+                startTime,
+                endTime
               })
             }
             className="px-3 py-1 bg-primary-600 text-white text-sm rounded hover:bg-primary-700"
@@ -362,9 +361,34 @@ function ItineraryItemCard({
   }
 
   return (
-    <div className="bg-gray-50 p-3 rounded-lg border group hover:bg-gray-100 transition-colors">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+    <div className="bg-gray-50 p-2 rounded-lg border group hover:bg-gray-100 transition-colors relative">
+      <div className="w-full">
+        {/* 右上のボタン群 */}
+        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onAddExpense && (
+            <button
+              onClick={() => onAddExpense(item)}
+              className="p-1 text-gray-500 hover:text-green-600"
+              title="費用を記録"
+            >
+              <Wallet className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={onEdit}
+            className="p-1 text-gray-500 hover:text-primary-600"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1 text-gray-500 hover:text-red-600"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="pr-12">
           <h5 className="font-medium text-gray-900">{item.title}</h5>
           {item.description && (
             <p className="text-sm text-gray-600 mt-1">{item.description}</p>
@@ -403,43 +427,20 @@ function ItineraryItemCard({
               💰 ¥{expenses.reduce((sum, exp) => sum + exp.amount, 0).toLocaleString()}
             </div>
           )}
-          
-          {/* 画像ギャラリー */}
-          <div className="mt-3 overflow-hidden">
-            <ItineraryImageGallery
-              images={item.images || []}
-              itineraryItemId={item.id}
-              displayMode={item.imageDisplayMode || 'thumbnail'}
-              canEdit={true}
-              onImagesChange={(images) => {
-                onSave({ images });
-              }}
-            />
-          </div>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onAddExpense && (
-            <button
-              onClick={() => onAddExpense(item)}
-              className="p-1 text-gray-500 hover:text-green-600"
-              title="費用を記録"
-            >
-              <Wallet className="w-3 h-3" />
-            </button>
-          )}
-          <button
-            onClick={onEdit}
-            className="p-1 text-gray-500 hover:text-primary-600"
-          >
-            <Edit2 className="w-3 h-3" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1 text-gray-500 hover:text-red-600"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
+
+      </div>
+      {/* 画像ギャラリー */}
+      <div className="mt-3 overflow-hidden">
+        <ItineraryImageGallery
+          images={item.images || []}
+          itineraryItemId={item.id}
+          displayMode={item.imageDisplayMode || 'thumbnail'}
+          canEdit={true}
+          onImagesChange={(images) => {
+            onSave({ images });
+          }}
+        />
       </div>
     </div>
   );
@@ -469,13 +470,13 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
     e.preventDefault();
     if (!title.trim()) return;
 
-    onSave({ 
-      title, 
-      description, 
-      location, 
-      locationUrl: locationUrl.trim() || undefined, 
-      startTime, 
-      endTime 
+    onSave({
+      title,
+      description,
+      location,
+      locationUrl: locationUrl.trim() || undefined,
+      startTime,
+      endTime
     });
   };
 
@@ -802,11 +803,11 @@ function DeleteConfirmModal({ item, onConfirm, onCancel }: DeleteConfirmModalPro
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-lg font-bold text-gray-900 mb-4">予定を削除</h3>
-        
+
         <p className="text-gray-700 mb-2">
           以下の予定を削除しますか？この操作は取り消せません。
         </p>
-        
+
         <div className="bg-gray-50 p-3 rounded-lg mb-6">
           <h4 className="font-medium text-gray-900">{item.title}</h4>
           {item.description && (

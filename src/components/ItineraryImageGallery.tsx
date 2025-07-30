@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Grid3x3, Minimize2 } from 'lucide-react';
 import { ItineraryImage } from '@/types';
 import ImageUploader from './ImageUploader';
 import ImageViewer from './ImageViewer';
@@ -24,6 +24,7 @@ export default function ItineraryImageGallery({
 }: ItineraryImageGalleryProps) {
   const [showUploader, setShowUploader] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
+  const [isCompact, setIsCompact] = useState(true);
 
   const handleImagesSelected = async (files: File[]) => {
     try {
@@ -64,42 +65,62 @@ export default function ItineraryImageGallery({
     return null;
   }
 
+  // サイズとレイアウトの設定
+  const imageSize = isCompact ? 'w-16 h-16' : 'w-24 h-24';
+  const eyeSize = isCompact ? 'w-4 h-4' : 'w-6 h-6';
+  const plusSize = isCompact ? 'w-4 h-4' : 'w-6 h-6';
+
   return (
-    <div className="grid grid-cols-4 gap-2 max-w-full">
-      {/* 画像表示 */}
-      {images.map((image) => (
-        <div
-          key={image.id}
-          className="relative group cursor-pointer w-20 h-20"
-          onClick={() => {
-            setShowViewer(true);
-          }}
-        >
-          <img
-            src={image.thumbnailUrl || image.url}
-            alt={image.altText || image.caption || '旅程画像'}
-            className="w-full h-full object-cover rounded-lg border border-gray-200"
-            loading="lazy"
-          />
-          
-          {/* ホバーオーバーレイ */}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
-            <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-      ))}
-      
-      {/* 画像追加ボタン */}
-      {canEdit && (
-        <div
-          onClick={() => setShowUploader(true)}
-          className="border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 cursor-pointer transition-colors flex items-center justify-center w-20 h-20"
-        >
-          <div className="text-center">
-            <Plus className="w-5 h-5 text-gray-400 mx-auto" />
-          </div>
+    <div className="space-y-2">
+      {/* 表示切り替えボタン */}
+      {images.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => setIsCompact(!isCompact)}
+            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+            title={isCompact ? "大きく表示" : "小さく表示"}
+          >
+            {isCompact ? <Grid3x3 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+          </button>
         </div>
       )}
+
+      <div className="flex flex-wrap gap-1 max-w-full">
+        {/* 画像表示 */}
+        {images.map((image) => (
+          <div
+            key={image.id}
+            className={`relative group cursor-pointer flex-shrink-0 ${imageSize}`}
+            onClick={() => {
+              setShowViewer(true);
+            }}
+          >
+            <img
+              src={image.thumbnailUrl || image.url}
+              alt={image.altText || image.caption || '旅程画像'}
+              className="w-full h-full object-cover rounded-lg border border-gray-200"
+              loading="lazy"
+            />
+            
+            {/* ホバーオーバーレイ */}
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
+              <Eye className={`${eyeSize} text-white opacity-0 group-hover:opacity-100 transition-opacity`} />
+            </div>
+          </div>
+        ))}
+      
+        {/* 画像追加ボタン */}
+        {canEdit && (
+          <div
+            onClick={() => setShowUploader(true)}
+            className={`border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 cursor-pointer transition-colors flex items-center justify-center flex-shrink-0 ${imageSize}`}
+          >
+            <div className="text-center">
+              <Plus className={`${plusSize} text-gray-400 mx-auto`} />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* モーダルコンポーネント */}
       <ImageUploader
