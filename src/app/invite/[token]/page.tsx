@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Calendar, Users, AlertCircle, CheckCircle, UserPlus } from 'lucide-react';
-import { InvitationDetails, JoinInvitationRequest, UserRegistrationData } from '@/types';
+import { Calendar, Users, AlertCircle, CheckCircle, UserPlus } from 'lucide-react';
+import { InvitationDetails, JoinInvitationRequest } from '@/types';
 import { invitationLinkApi } from '@/services/invitationApi';
 import { useAuthStore } from '@/stores/authStore';
+import { useTravelStore } from '@/stores/travelStore';
 
 interface InvitePageProps {
   params: {
@@ -17,10 +18,11 @@ export default function InvitePage({ params }: InvitePageProps) {
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [joiningMode, setJoiningMode] = useState<'login' | 'register' | 'guest' | null>(null);
+  const [joiningMode, setJoiningMode] = useState<'register' | 'guest' | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [joinSuccess, setJoinSuccess] = useState(false);
-  const { user, login } = useAuthStore();
+  const { user } = useAuthStore();
+  const { fetchGroups, fetchTravels } = useTravelStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function InvitePage({ params }: InvitePageProps) {
       setLoading(true);
       const details = await invitationLinkApi.getDetails(params.token);
       setInvitation(details);
-      
+
       if (!details.isValid) {
         setError('この招待リンクは無効です。');
       }
@@ -48,16 +50,23 @@ export default function InvitePage({ params }: InvitePageProps) {
 
   const handleJoinAsExistingUser = async () => {
     if (!user || !invitation) return;
-    
+
     setIsJoining(true);
     try {
       const joinRequest: JoinInvitationRequest = {
         userId: user.id,
       };
-      
+
       const result = await invitationLinkApi.join(params.token, joinRequest);
-      
+
       if (result.success) {
+        // 参加成功後にデータを再取得
+        try {
+          await Promise.all([fetchGroups(), fetchTravels()]);
+        } catch (error) {
+          console.error('Failed to refresh data after joining:', error);
+        }
+
         setJoinSuccess(true);
         setTimeout(() => {
           router.push('/'); // ホームページに遷移してグループ一覧を表示
@@ -73,16 +82,10 @@ export default function InvitePage({ params }: InvitePageProps) {
     }
   };
 
-  const formatDateRange = (startDate: Date, endDate: Date): string => {
-    const start = startDate.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-    const end = endDate.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-    return `${start} - ${end}`;
-  };
-
   const formatGroupTravels = (travels: any[]) => {
-    if (travels.length === 0) return '予定なし';
-    if (travels.length === 1) return travels[0].name;
-    return `${travels[0].name} 他${travels.length - 1}件`;
+    if (!travels || travels.length === 0) return '予定なし';
+    if (travels.length === 1) return travels[0]?.name || '旅行';
+    return `${travels[0]?.name || '旅行'} 他${travels.length - 1}件`;
   };
 
   if (loading) {
@@ -172,7 +175,7 @@ export default function InvitePage({ params }: InvitePageProps) {
         {/* 参加方法選択 */}
         <div className="bg-white rounded-2xl shadow-sm border p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">参加方法を選択</h3>
-          
+
           {user ? (
             /* ログイン済みユーザー */
             <div className="space-y-4">
@@ -189,16 +192,15 @@ export default function InvitePage({ params }: InvitePageProps) {
                 <button
                   onClick={handleJoinAsExistingUser}
                   disabled={isJoining}
-                  className={`w-full mt-3 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    isJoining
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
+                  className={`w-full mt-3 px-4 py-2 rounded-lg font-medium transition-colors ${isJoining
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
                 >
                   {isJoining ? '参加中...' : 'このアカウントで参加する'}
                 </button>
               </div>
-              
+
               <div className="text-center">
                 <button
                   onClick={() => {
@@ -216,21 +218,13 @@ export default function InvitePage({ params }: InvitePageProps) {
             /* 未ログインユーザー */
             <div className="space-y-3">
               <button
-                onClick={() => setJoiningMode('login')}
-                className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
-              >
-                <div className="font-medium text-gray-900 mb-1">既存のアカウントでログイン</div>
-                <div className="text-sm text-gray-600">すでにアカウントをお持ちの方</div>
-              </button>
-              
-              <button
                 onClick={() => setJoiningMode('register')}
                 className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
               >
                 <div className="font-medium text-gray-900 mb-1">新規アカウント作成</div>
                 <div className="text-sm text-gray-600">新しくアカウントを作成して参加</div>
               </button>
-              
+
               <button
                 onClick={() => setJoiningMode('guest')}
                 className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors"
@@ -273,7 +267,7 @@ export default function InvitePage({ params }: InvitePageProps) {
 }
 
 interface JoinModalProps {
-  mode: 'login' | 'register' | 'guest';
+  mode: 'register' | 'guest';
   invitation: InvitationDetails;
   token: string;
   onClose: () => void;
@@ -286,49 +280,60 @@ function JoinModal({ mode, invitation, token, onClose, onJoinSuccess }: JoinModa
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuthStore();
+  const { guestLogin } = useAuthStore();
+  const { fetchGroups, fetchTravels } = useTravelStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      let joinRequest: JoinInvitationRequest;
-
-      if (mode === 'login') {
-        // ログイン処理
-        const loginResult = await login(email, password);
-        if (loginResult.success && loginResult.user) {
-          joinRequest = { userId: loginResult.user.id };
-        } else {
-          alert('ログインに失敗しました。');
-          return;
-        }
-      } else if (mode === 'register') {
+      if (mode === 'register') {
         // 新規登録と同時参加
-        joinRequest = {
+        const joinRequest: JoinInvitationRequest = {
           userData: {
             email,
             password,
             name,
           },
         };
-      } else {
-        // ゲスト参加
-        joinRequest = {
-          guestData: {
-            nickname,
-            deviceFingerprint: generateDeviceFingerprint(),
-          },
-        };
-      }
 
-      const result = await invitationLinkApi.join(token, joinRequest);
-      
-      if (result.success) {
-        onJoinSuccess();
+        const result = await invitationLinkApi.join(token, joinRequest);
+
+        if (result.success) {
+          // 新規登録の場合はユーザー情報とトークンを設定
+          if (result.user && result.access_token) {
+            localStorage.setItem('access_token', result.access_token);
+            // 通常のユーザーとして登録完了（authStoreで自動処理される）
+          }
+
+          // 参加成功後にグループとトラベルデータを再取得
+          try {
+            await Promise.all([fetchGroups(), fetchTravels()]);
+          } catch (error) {
+            console.warn('Failed to refresh data after join:', error);
+          }
+
+          onJoinSuccess();
+        } else {
+          alert(result.message || '参加に失敗しました');
+        }
       } else {
-        alert(result.message || 'グループ参加に失敗しました。');
+        // ゲスト参加 - 新しいguestLoginメソッドを使用
+        const result = await guestLogin(nickname, invitation.group.id);
+
+        if (result.success) {
+          // 参加成功後にグループとトラベルデータを再取得
+          try {
+            await Promise.all([fetchGroups(), fetchTravels()]);
+          } catch (error) {
+            console.warn('Failed to refresh data after guest login:', error);
+          }
+
+          onJoinSuccess();
+        } else {
+          alert(result.message || 'ゲストログインに失敗しました');
+        }
       }
     } catch (error) {
       console.error('Failed to join group:', error);
@@ -338,45 +343,18 @@ function JoinModal({ mode, invitation, token, onClose, onJoinSuccess }: JoinModa
     }
   };
 
-  const generateDeviceFingerprint = (): string => {
-    // 簡易的なデバイスフィンガープリント生成
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx?.fillText('fingerprint', 10, 10);
-    
-    const fingerprint = [
-      navigator.userAgent,
-      navigator.language,
-      screen.width + 'x' + screen.height,
-      new Date().getTimezoneOffset(),
-      canvas.toDataURL(),
-    ].join('|');
-    
-    // 簡易ハッシュ化
-    let hash = 0;
-    for (let i = 0; i < fingerprint.length; i++) {
-      const char = fingerprint.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // 32bit整数に変換
-    }
-    
-    return Math.abs(hash).toString(36);
+  const getModalTitle = () => {
+    if (mode === 'guest') return 'ゲストとして参加';
+    if (mode === 'register') return '新規アカウント作成';
+    return '参加';
   };
 
-  const getModalTitle = () => {
-    switch (mode) {
-      case 'login': return 'ログイン';
-      case 'register': return '新規アカウント作成';
-      case 'guest': return 'ゲストとして参加';
-      default: return '';
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-lg font-bold text-gray-900 mb-4">{getModalTitle()}</h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'guest' ? (
             <div>
@@ -412,7 +390,7 @@ function JoinModal({ mode, invitation, token, onClose, onJoinSuccess }: JoinModa
                   />
                 </div>
               )}
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   メールアドレス *
@@ -426,7 +404,7 @@ function JoinModal({ mode, invitation, token, onClose, onJoinSuccess }: JoinModa
                   required
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   パスワード *
@@ -455,11 +433,10 @@ function JoinModal({ mode, invitation, token, onClose, onJoinSuccess }: JoinModa
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                isSubmitting
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-primary-600 text-white hover:bg-primary-700'
-              }`}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isSubmitting
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary-600 text-white hover:bg-primary-700'
+                }`}
             >
               {isSubmitting ? '処理中...' : mode === 'guest' ? 'ゲスト参加' : '参加'}
             </button>

@@ -101,7 +101,13 @@ export const invitationLinkApi = {
   },
 
   // 招待リンク経由での参加
-  join: async (token: string, data: JoinInvitationRequest): Promise<{ success: boolean; userId?: string; message: string }> => {
+  join: async (token: string, data: JoinInvitationRequest): Promise<{ 
+    success: boolean; 
+    userId?: string; 
+    message: string;
+    access_token?: string;
+    user?: any;
+  }> => {
     console.log('Joining via invitation link:', token.substring(0, 8) + '...', {
       hasUserId: !!data.userId,
       hasUserData: !!data.userData,

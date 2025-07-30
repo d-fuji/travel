@@ -146,6 +146,20 @@ export const authApi = {
     });
     return response.data;
   },
+
+  guestLogin: async (nickname: string, deviceFingerprint: string, groupId: string) => {
+    const response = await api.post('/auth/guest-login', {
+      nickname,
+      deviceFingerprint,
+      groupId,
+    });
+    return response.data;
+  },
+
+  refreshGuestSession: async (tempId: string) => {
+    const response = await api.post(`/auth/guest-refresh/${tempId}`);
+    return response.data;
+  },
 };
 
 // Users API

@@ -12,7 +12,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { Plus, Users, Calendar, MapPin } from 'lucide-react';
 
 export default function Home() {
-  const { user } = useAuthStore();
+  const { user, isGuest, guestUser } = useAuthStore();
   const { isAuthenticated } = useAuthGuard();
   const { groups, travels, fetchTravels, fetchGroups, isLoading } =
     useTravelStore();
@@ -74,11 +74,16 @@ export default function Home() {
     );
   }
 
-  const userGroups = groups.filter(
-    (group) =>
-      group.createdBy === user?.id ||
-      group.members.some((member) => member.id === user?.id)
-  );
+  const userGroups = groups.filter((group) => {
+    if (user) {
+      return group.createdBy === user.id ||
+             group.members.some((member) => member.id === user.id);
+    }
+    if (isGuest && guestUser) {
+      return group.id === guestUser.groupId;
+    }
+    return false;
+  });
 
   const userTravels = travels.filter((travel) =>
     userGroups.some((group) => group.id === travel.groupId)
@@ -91,12 +96,14 @@ export default function Home() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">グループ</h2>
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+            {!isGuest && (
+              <button
+                onClick={() => setShowCreateGroup(true)}
+                className="p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {userGroups.length > 0 ? (
@@ -120,18 +127,20 @@ export default function Home() {
                         <span>{group.members.length}人</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedGroupId(group.id);
-                          setShowCreateTravel(true);
-                        }}
-                        className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100"
-                      >
-                        旅行作成
-                      </button>
-                    </div>
+                    {!isGuest && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedGroupId(group.id);
+                            setShowCreateTravel(true);
+                          }}
+                          className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100"
+                        >
+                          旅行作成
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -139,13 +148,17 @@ export default function Home() {
           ) : (
             <div className="bg-white p-8 rounded-2xl shadow-sm border text-center">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 mb-4">まだグループがありません</p>
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                最初のグループを作成
-              </button>
+              <p className="text-gray-500 mb-4">
+                {isGuest ? '参加中のグループがありません' : 'まだグループがありません'}
+              </p>
+              {!isGuest && (
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  最初のグループを作成
+                </button>
+              )}
             </div>
           )}
         </div>

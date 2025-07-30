@@ -103,84 +103,7 @@ interface TravelState {
   updateExpense: (id: string, updates: Partial<Expense> & { categoryId?: string }) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
 
-  // Legacy mock data for development
-  initializeWithMockData: () => void;
 }
-
-// Mock data for development
-const mockGroups: TravelGroup[] = [
-  {
-    id: 'group-1',
-    name: '家族旅行',
-    members: [
-      { id: 'user-2', email: 'mom@example.com', name: 'お母さん' },
-      { id: 'user-3', email: 'dad@example.com', name: 'お父さん' },
-    ],
-    createdBy: '1',
-    createdAt: new Date('2024-01-01'),
-  },
-  {
-    id: 'group-2',
-    name: 'カップル旅行',
-    members: [
-      { id: 'user-4', email: 'partner@example.com', name: 'パートナー' },
-    ],
-    createdBy: '1',
-    createdAt: new Date('2024-01-02'),
-  },
-];
-
-const mockTravels: Travel[] = [
-  {
-    id: 'travel-1',
-    name: '沖縄家族旅行',
-    destination: '沖縄県',
-    startDate: new Date('2024-03-20'),
-    endDate: new Date('2024-03-23'),
-    groupId: 'group-1',
-    createdBy: '1',
-    createdAt: new Date('2024-01-15'),
-  },
-  {
-    id: 'travel-2',
-    name: '京都桜旅行',
-    destination: '京都府',
-    startDate: new Date('2024-04-05'),
-    endDate: new Date('2024-04-07'),
-    groupId: 'group-2',
-    createdBy: '1',
-    createdAt: new Date('2024-01-20'),
-  },
-];
-
-const mockItineraryItems: ItineraryItem[] = [
-  {
-    id: 'item-1',
-    title: '那覇空港到着',
-    description: 'ANA便で到着予定',
-    location: '那覇空港',
-    startTime: '10:30',
-    endTime: '11:00',
-    date: '2024-03-20',
-    period: 'morning',
-    travelId: 'travel-1',
-    createdBy: '1',
-    createdAt: new Date('2024-01-16'),
-    updatedAt: new Date('2024-01-16'),
-  },
-];
-
-const mockWishlistItems: WishlistItem[] = [
-  {
-    id: 'wish-1',
-    name: '首里城',
-    description: '沖縄の歴史を学ぶ',
-    addedBy: '1',
-    travelId: 'travel-1',
-    isShared: true,
-    createdAt: new Date('2024-01-17'),
-  },
-];
 
 // Default expense categories
 const defaultCategories: ExpenseCategory[] = [
@@ -190,38 +113,6 @@ const defaultCategories: ExpenseCategory[] = [
   { id: 'entertainment', name: '観光・娯楽', color: '#EF4444', icon: '🎡' },
   { id: 'shopping', name: '買い物', color: '#8B5CF6', icon: '🛍️' },
   { id: 'other', name: 'その他', color: '#6B7280', icon: '📝' },
-];
-
-const mockExpenses: Expense[] = [
-  {
-    id: 'expense-1',
-    travelId: 'travel-1',
-    amount: 15000,
-    title: '那覇空港からホテル',
-    category: defaultCategories[0],
-    paidBy: '1',
-    splitBetween: ['1', 'user-2', 'user-3'],
-    splitMethod: 'equal',
-    date: new Date('2024-03-20'),
-    memo: 'タクシー代',
-    createdBy: '1',
-    createdAt: new Date('2024-03-20'),
-    updatedAt: new Date('2024-03-20'),
-  },
-  {
-    id: 'expense-2',
-    travelId: 'travel-1',
-    amount: 45000,
-    title: 'ホテル宿泊費',
-    category: defaultCategories[1],
-    paidBy: 'user-2',
-    splitBetween: ['1', 'user-2', 'user-3'],
-    splitMethod: 'equal',
-    date: new Date('2024-03-20'),
-    createdBy: 'user-2',
-    createdAt: new Date('2024-03-20'),
-    updatedAt: new Date('2024-03-20'),
-  },
 ];
 
 export const useTravelStore = create<TravelState>()(
@@ -590,20 +481,6 @@ export const useTravelStore = create<TravelState>()(
         } catch (error) {
           console.error('Failed to delete expense:', error);
           throw error;
-        }
-      },
-
-      initializeWithMockData: () => {
-        const { groups, travels } = get();
-        // Only initialize if no data exists
-        if (groups.length === 0 && travels.length === 0) {
-          set({
-            groups: mockGroups,
-            travels: mockTravels,
-            itineraryItems: mockItineraryItems,
-            wishlistItems: mockWishlistItems,
-            expenses: mockExpenses,
-          });
         }
       },
     }),
