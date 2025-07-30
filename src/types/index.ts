@@ -9,9 +9,16 @@ export interface TravelGroup {
   id: string;
   name: string;
   members: User[];
+  guestUsers?: GuestUserInfo[]; // guest users information from API
   creator?: User; // creator information from API
   createdBy: string;
   createdAt: Date;
+}
+
+export interface GuestUserInfo {
+  tempId: string;
+  nickname: string;
+  joinedAt: Date;
 }
 
 export interface Travel {

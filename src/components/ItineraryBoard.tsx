@@ -27,7 +27,7 @@ export default function ItineraryBoard({
     expenses,
     fetchExpenses,
   } = useTravelStore();
-  const { user } = useAuthStore();
+  const { user, isGuest } = useAuthStore();
 
   // Fetch itinerary items and expenses for this travel
   useEffect(() => {
@@ -187,12 +187,14 @@ export default function ItineraryBoard({
                             <span>{period.icon}</span>
                             {period.label}
                           </h4>
-                          <button
-                            onClick={() => handleAddItem(date, period.key)}
-                            className="p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
+                          {!isGuest && (
+                            <button
+                              onClick={() => handleAddItem(date, period.key)}
+                              className="p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -205,6 +207,7 @@ export default function ItineraryBoard({
                                 expenses={itemExpenses}
                                 travelId={travelId}
                                 isEditing={editingItem === item.id}
+                                canEdit={!isGuest}
                                 onEdit={() => setEditingItem(item.id)}
                                 onSave={(_updates) => {
                                   updateItineraryItem(item.id, _updates);
@@ -265,6 +268,7 @@ interface ItineraryItemCardProps {
   expenses: Expense[];
   travelId: string;
   isEditing: boolean;
+  canEdit: boolean;
   onEdit: () => void;
   onSave: (_updates: Partial<ItineraryItem>) => void;
   onCancel: () => void;
@@ -277,6 +281,7 @@ function ItineraryItemCard({
   expenses,
   travelId,
   isEditing,
+  canEdit,
   onEdit,
   onSave,
   onCancel,
@@ -367,29 +372,31 @@ function ItineraryItemCard({
     <div className="bg-gray-50 p-2 rounded-lg border group hover:bg-gray-100 transition-colors relative">
       <div className="w-full">
         {/* 右上のボタン群 */}
-        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onAddExpense && (
+        {canEdit && (
+          <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onAddExpense && (
+              <button
+                onClick={() => onAddExpense(item)}
+                className="p-1 text-gray-500 hover:text-green-600"
+                title="費用を記録"
+              >
+                <Wallet className="w-3 h-3" />
+              </button>
+            )}
             <button
-              onClick={() => onAddExpense(item)}
-              className="p-1 text-gray-500 hover:text-green-600"
-              title="費用を記録"
+              onClick={onEdit}
+              className="p-1 text-gray-500 hover:text-primary-600"
             >
-              <Wallet className="w-3 h-3" />
+              <Edit2 className="w-3 h-3" />
             </button>
-          )}
-          <button
-            onClick={onEdit}
-            className="p-1 text-gray-500 hover:text-primary-600"
-          >
-            <Edit2 className="w-3 h-3" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1 text-gray-500 hover:text-red-600"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
+            <button
+              onClick={onDelete}
+              className="p-1 text-gray-500 hover:text-red-600"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         <div className="pr-12">
           <h5 className="font-medium text-gray-900">{item.title}</h5>
@@ -440,7 +447,7 @@ function ItineraryItemCard({
           itineraryItemId={item.id}
           travelId={travelId}
           displayMode={item.imageDisplayMode || 'thumbnail'}
-          canEdit={true}
+          canEdit={canEdit}
           onImagesChange={(images) => {
             onSave({ images });
           }}

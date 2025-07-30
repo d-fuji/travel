@@ -8,7 +8,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuthStore();
+  const { user, isGuest, guestUser, logout } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -22,7 +22,7 @@ export default function Layout({ children }: LayoutProps) {
                 <User className="w-4 h-4 text-white" />
               </div>
               <span className="text-sm font-medium text-gray-700">
-                {user?.name}
+                {isGuest && guestUser ? `${guestUser.nickname} (ゲスト)` : user?.name}
               </span>
             </div>
 

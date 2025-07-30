@@ -5,7 +5,7 @@ import { useTravelStore } from '@/stores/travelStore';
 import { useAuthStore } from '@/stores/authStore';
 import { TravelGroup, InvitationLink, CreateInvitationLinkRequest } from '@/types';
 import { invitationLinkApi } from '@/services/invitationApi';
-import { X, Trash2, AlertTriangle, Users, Link, Copy, Plus, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Users, Link, Copy, Plus, CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 
 interface EditGroupModalProps {
   isOpen: boolean;
@@ -24,33 +24,37 @@ export default function EditGroupModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // 招待関連の状態
   const [invitationLinks, setInvitationLinks] = useState<InvitationLink[]>([]);
   const [showCreateInviteForm, setShowCreateInviteForm] = useState(false);
   const [invitationLoading, setInvitationLoading] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
-  
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   const { updateGroup, addMemberToGroup, removeMemberFromGroup, deleteGroup } =
     useTravelStore();
-  const { user } = useAuthStore();
+  const { user, isGuest, guestUser } = useAuthStore();
 
   useEffect(() => {
-    if (group && user) {
+    if (group && (user || (isGuest && guestUser))) {
       setGroupName(group.name);
-      
+
       // Get all member emails
       const memberEmails = group.members.map((member) => member.email);
-      
+
+      // Get guest users (display as nickname + "(ゲスト)")
+      const guestDisplayNames = (group.guestUsers || []).map((guest) => `${guest.nickname} (ゲスト)`);
+
       // Get creator's email from group.creator if available, otherwise from current user if they're the creator
       let creatorEmail = '';
       if (group.creator) {
         creatorEmail = group.creator.email;
-      } else if (group.createdBy === user.id) {
+      } else if (user && group.createdBy === user.id) {
         creatorEmail = user.email;
       }
-      
-      // Create complete email list
+
+      // Create complete email list (including guest users)
       // All members should already include the creator since backend adds creator to members table
       // But let's make sure creator is included just in case
       let allEmails = [...memberEmails];
@@ -58,17 +62,20 @@ export default function EditGroupModal({
         // Put creator email first
         allEmails = [creatorEmail, ...memberEmails];
       }
-      
-      setMemberEmails(allEmails);
-      
+
+      // Add guest users to the list
+      const allMembersAndGuests = [...allEmails, ...guestDisplayNames];
+
+      setMemberEmails(allMembersAndGuests);
+
       // 招待リンクを取得
       fetchInvitationLinks();
     }
-  }, [group, user]);
+  }, [group, user, guestUser]);
 
   const fetchInvitationLinks = async () => {
     if (!group) return;
-    
+
     setInvitationLoading(true);
     try {
       const links = await invitationLinkApi.getByGroup(group.id);
@@ -100,7 +107,7 @@ export default function EditGroupModal({
         updatedAt: oneDayAgo,
       },
       {
-        id: 'mock-link-2', 
+        id: 'mock-link-2',
         groupId: groupId,
         token: 'xyz789uvw456rst123',
         createdBy: user?.id || '1',
@@ -136,7 +143,7 @@ export default function EditGroupModal({
 
   const handleMemberChange = (index: number, value: string) => {
     handleInputChange();
-    
+
     // 作成者のメールアドレスが入力された場合は無視する
     if (user && value.trim() === user.email) {
       return;
@@ -192,7 +199,7 @@ export default function EditGroupModal({
       onClose();
     } catch (error: any) {
       console.error('Failed to update group:', error);
-      
+
       // Extract error message from API response
       let errorMessage = 'グループの更新に失敗しました';
       if (error.response?.data?.message) {
@@ -221,7 +228,7 @@ export default function EditGroupModal({
       } else if (error.message && error.message.includes('Network Error')) {
         errorMessage = 'ネットワークエラーが発生しました';
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -249,7 +256,7 @@ export default function EditGroupModal({
 
   const handleCreateInvitationLink = async (data: CreateInvitationLinkRequest) => {
     if (!group) return;
-    
+
     try {
       const newLink = await invitationLinkApi.create(group.id, data);
       setInvitationLinks([...invitationLinks, newLink]);
@@ -310,8 +317,8 @@ export default function EditGroupModal({
 
     try {
       await invitationLinkApi.deactivate(linkId);
-      setInvitationLinks(links => 
-        links.map(link => 
+      setInvitationLinks(links =>
+        links.map(link =>
           link.id === linkId ? { ...link, isActive: false } : link
         )
       );
@@ -319,8 +326,8 @@ export default function EditGroupModal({
     } catch (error) {
       console.error('Failed to deactivate invitation link:', error);
       // モック: 無効化処理
-      setInvitationLinks(links => 
-        links.map(link => 
+      setInvitationLinks(links =>
+        links.map(link =>
           link.id === linkId ? { ...link, isActive: false, updatedAt: new Date() } : link
         )
       );
@@ -399,30 +406,41 @@ export default function EditGroupModal({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             {/* タブ */}
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setActiveTab('members')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'members'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${activeTab === 'members'
                     ? 'bg-white text-primary-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-800'
-                }`}
+                  }`}
               >
                 <Users className="w-4 h-4" />
                 メンバー管理
               </button>
               <button
-                onClick={() => setActiveTab('invitations')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'invitations'
+                onClick={() => {
+                  if (isGuest) {
+                    setShowUpgradeModal(true);
+                  } else {
+                    setActiveTab('invitations');
+                  }
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${activeTab === 'invitations'
                     ? 'bg-white text-primary-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
+                    : isGuest
+                      ? 'text-gray-400 cursor-pointer hover:text-green-500'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
               >
-                <Link className="w-4 h-4" />
+                {isGuest ? <Lock className="w-4 h-4" /> : <Link className="w-4 h-4" />}
                 招待リンク
+                {isGuest && (
+                  <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full ml-1">
+                    登録
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -447,7 +465,7 @@ export default function EditGroupModal({
                 onRemoveMember={handleRemoveMember}
                 onInputChange={handleInputChange}
               />
-            ) : (
+            ) : !isGuest ? (
               <InvitationManagement
                 invitationLinks={invitationLinks}
                 loading={invitationLoading}
@@ -460,10 +478,21 @@ export default function EditGroupModal({
                 copiedLinkId={copiedLinkId}
                 isCreator={isCreator}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </div>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <UpgradeModal
+          onClose={() => setShowUpgradeModal(false)}
+          onUpgrade={() => {
+            // TODO: 本登録フローの実装
+            setShowUpgradeModal(false);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -528,35 +557,41 @@ function MemberManagement({
           メンバー（メールアドレス）
         </label>
         <div className="space-y-2">
-          {memberEmails.map((email, index) => (
-            <div key={index} className="flex gap-2">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) =>
-                  onMemberChange(index, e.target.value)
-                }
-                className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                  (!isCreator && index < group.members.length) || email === user?.email
-                    ? 'bg-gray-50 text-gray-700'
-                    : ''
-                }`}
-                placeholder="member@example.com"
-                readOnly={email === user?.email}
-              />
-              {isCreator &&
-                memberEmails.length > 1 &&
-                email !== user?.email && (
-                  <button
-                    type="button"
-                    onClick={() => onRemoveMember(index)}
-                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-            </div>
-          ))}
+          {memberEmails.map((email, index) => {
+            const isGuestUser = email.includes('(ゲスト)');
+            const isCurrentUser = email === user?.email;
+            const isReadOnly = isCurrentUser || isGuestUser || (!isCreator && index < group.members.length);
+
+            return (
+              <div key={index} className="flex gap-2">
+                <input
+                  type={isGuestUser ? "text" : "email"}
+                  value={email}
+                  onChange={(e) =>
+                    onMemberChange(index, e.target.value)
+                  }
+                  className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${isReadOnly
+                      ? 'bg-gray-50 text-gray-700'
+                      : ''
+                    }`}
+                  placeholder={isGuestUser ? "ゲストユーザー" : "member@example.com"}
+                  readOnly={isReadOnly}
+                />
+                {isCreator &&
+                  memberEmails.length > 1 &&
+                  !isCurrentUser &&
+                  !isGuestUser && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveMember(index)}
+                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+              </div>
+            );
+          })}
           {isCreator && (
             <button
               type="button"
@@ -744,16 +779,15 @@ function InvitationLinkCard({ link, onCopy, onDeactivate, onDelete, isCopied, is
         <div className="flex items-center gap-2 ml-4">
           <button
             onClick={onCopy}
-            className={`p-2 rounded-lg transition-colors ${
-              isCopied 
-                ? 'bg-green-100 text-green-600' 
+            className={`p-2 rounded-lg transition-colors ${isCopied
+                ? 'bg-green-100 text-green-600'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+              }`}
             title="リンクをコピー"
           >
             {isCopied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           </button>
-          
+
           {isCreator && link.isActive && (
             <button
               onClick={onDeactivate}
@@ -763,7 +797,7 @@ function InvitationLinkCard({ link, onCopy, onDeactivate, onDelete, isCopied, is
               <EyeOff className="w-4 h-4" />
             </button>
           )}
-          
+
           {isCreator && (
             <button
               onClick={onDelete}
@@ -790,13 +824,13 @@ function CreateInvitationForm({ onSubmit, onCancel }: CreateInvitationFormProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data: CreateInvitationLinkRequest = {};
-    
+
     if (customMessage.trim()) {
       data.customMessage = customMessage.trim();
     }
-    
+
     onSubmit(data);
   };
 
@@ -804,7 +838,7 @@ function CreateInvitationForm({ onSubmit, onCancel }: CreateInvitationFormProps)
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-lg font-bold text-gray-900 mb-4">新しい招待リンクを作成</h3>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -835,6 +869,73 @@ function CreateInvitationForm({ onSubmit, onCancel }: CreateInvitationFormProps)
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// アップグレードモーダル
+interface UpgradeModalProps {
+  onClose: () => void;
+  onUpgrade: () => void;
+}
+
+function UpgradeModal({ onClose, onUpgrade }: UpgradeModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-white" />
+          </div>
+
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mb-3">
+            <span className="text-green-600">✓</span>
+            完全無料
+          </div>
+
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            無料登録で全機能を解放
+          </h3>
+
+          <p className="text-gray-600 mb-6">
+            <span className="font-semibold text-green-600">無料</span>でアカウント登録すると、招待リンクの作成・管理など、すべての機能をご利用いただけます。
+          </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>招待リンクの作成・管理</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>グループの編集権限</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>費用の記録と分担</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>データの永続保存</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-8">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            後で
+          </button>
+          <button
+            onClick={onUpgrade}
+            className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-colors font-medium"
+          >
+            無料で登録する
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -67,14 +67,16 @@
 
 #### 4.1 アクセス制御
 - **トークンベース認証**：セキュアなランダムトークン生成
-- **IPアドレス制限**：特定地域からのアクセス制限（オプション）
-- **デバイス制限**：同一デバイスからの重複参加防止
+- **ゲスト認証システム**：一時的なAPIトークン発行によるセキュアなアクセス
+- **デバイス制限**：デバイスフィンガープリントによる重複参加防止
+- **セッション管理**：ゲストユーザーの永続化とページリロード対応
 - **スパム対策**：短時間での大量アクセス検知・制限
 
 #### 4.2 権限設定
 - **管理者権限**：リンク生成・管理は管理者のみ
 - **招待者権限**：一般メンバーの招待権限設定
 - **参加者権限**：招待経由参加者の初期権限設定
+- **ゲスト権限**：読み取り・コメント権限のみ、作成・編集は制限
 
 ### 5. ゲストユーザー本登録機能
 
@@ -118,6 +120,29 @@
 - **エラーログ**：失敗した招待の記録・分析
 
 ## 技術仕様
+
+### ゲスト認証アーキテクチャ
+
+#### 認証フロー
+1. **ゲスト参加時**：
+   - ニックネーム + デバイスフィンガープリント + groupIdでAPI呼び出し
+   - サーバーが一時的なAPIトークンを発行
+   - ローカルストレージにトークン保存
+   - authStoreで`isAuthenticated: true, isGuest: true`を設定
+
+2. **ページリロード時**：
+   - Zustand persistでゲストユーザー情報を復元
+   - onRehydrateStorageでトークンとゲスト情報の整合性チェック
+   - 認証状態を適切に復元
+
+3. **API通信**：
+   - 通常ユーザーと同じBearerトークン認証
+   - サーバー側でゲストトークンを識別・権限制御
+
+#### 権限制御
+- **フロントエンド制限**：グループ・旅行作成ボタンを非表示
+- **APIレベル権限**：読み取り・コメント権限のみ許可
+- **UI制限**：編集系機能への適切なアクセス制御
 
 ### データ構造
 
@@ -227,6 +252,17 @@ PATCH /api/groups/{groupId}/invitation-settings
   allowGuestMode?: boolean;
 }
 
+// ゲストログイン（実装済み）
+POST /auth/guest-login
+{
+  nickname: string;
+  deviceFingerprint: string;
+  groupId: string;
+}
+
+// ゲストセッション更新（実装済み）
+POST /auth/guest-refresh/{tempId}
+
 // ゲストユーザー本登録（将来実装）
 POST /api/guest/{tempId}/convert
 {
@@ -287,11 +323,12 @@ POST /api/guest/{tempId}/convert
 - [ ] 招待リンク使用履歴の表示機能
 
 ### Phase 3: ゲストモード・本登録機能
-- [x] ゲストユーザー機能（UI実装済み）
-- [ ] 機能制限システム
-- [ ] 本登録フロー
-- [ ] データ継承機能
-- [ ] ゲスト認証システム強化
+- [x] ゲストユーザー機能（完全実装済み）
+- [x] ゲスト認証システム（APIトークンベース）
+- [x] 機能制限システム（UI制限実装済み）
+- [x] ゲストログインフロー（ニックネーム入力）
+- [ ] 本登録フロー（UI準備済み、API未実装）
+- [ ] データ継承機能（API未実装）
 
 ### Phase 4: セキュリティ・分析強化
 - [x] 基本権限設定（実装済み）
@@ -333,12 +370,14 @@ POST /api/guest/{tempId}/convert
 ## 関連ファイル
 
 実装済みファイル：
-- `src/types/index.ts` - 招待関連の型定義
-- `src/components/EditGroupModal.tsx` - グループ編集画面に招待機能を統合（モック対応含む）
+- `src/types/index.ts` - 招待関連の型定義（GuestUser型含む）
+- `src/components/EditGroupModal.tsx` - グループ編集画面に招待機能を統合
 - `src/services/invitationApi.ts` - 招待API処理（完全なAPIセット）
-- `src/app/invite/[token]/page.tsx` - 招待リンク参加ページ（ゲストモード対応）
-- `src/stores/authStore.ts` - ゲスト認証状態管理
-- `src/app/page.tsx` - ホームページからグループ編集へのアクセス
+- `src/services/api.ts` - ゲストログインAPI（guestLogin, refreshGuestSession）
+- `src/app/invite/[token]/page.tsx` - 招待リンク参加ページ（ゲストモード完全対応）
+- `src/stores/authStore.ts` - ゲスト認証状態管理（完全実装）
+- `src/hooks/useAuthGuard.ts` - 認証ガード（ゲストユーザー対応）
+- `src/app/page.tsx` - ホームページ（ゲストユーザーUI制限対応）
 
 ## 開発・テスト機能
 
@@ -358,4 +397,6 @@ POST /api/guest/{tempId}/convert
 - ✅ リンク削除
 - ✅ 使用履歴取得
 - ✅ 招待設定管理
+- ✅ ゲストログイン（完全実装）
+- ✅ ゲストセッション更新（完全実装）
 - ⚠️ ゲスト本登録（UIのみ、API未実装）

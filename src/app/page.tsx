@@ -77,7 +77,7 @@ export default function Home() {
   const userGroups = groups.filter((group) => {
     if (user) {
       return group.createdBy === user.id ||
-             group.members.some((member) => member.id === user.id);
+        group.members.some((member) => member.id === user.id);
     }
     if (isGuest && guestUser) {
       return group.id === guestUser.groupId;
@@ -92,6 +92,37 @@ export default function Home() {
   return (
     <Layout>
       <div className="p-4">
+        {/* Guest User Banner */}
+        {isGuest && (
+          <div className="mb-6 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center">
+                <Users className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-green-900">ゲストモードで参加中</h3>
+                  <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
+                    無料登録可能
+                  </span>
+                </div>
+                <p className="text-sm text-green-700">
+                  現在は旅程の閲覧のみ可能です。<span className="font-semibold text-green-600">無料</span>アカウント登録で全機能をご利用いただけます。
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  // TODO: 本登録フローの実装
+                  alert('本登録機能は準備中です');
+                }}
+                className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+              >
+                登録
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Groups Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -124,7 +155,7 @@ export default function Home() {
                       </h3>
                       <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                         <Users className="w-4 h-4" />
-                        <span>{group.members.length}人</span>
+                        <span>{group.members.length + (group.guestUsers?.length || 0)}人</span>
                       </div>
                     </div>
                     {!isGuest && (
@@ -197,6 +228,11 @@ export default function Home() {
                             <Users className="w-4 h-4" />
                             <span>{group.name}</span>
                           </div>
+                        )}
+                        {isGuest && (
+                          <p className="text-xs text-green-600 mt-2">
+                            クリックして旅程を確認
+                          </p>
                         )}
                       </div>
                       <button
