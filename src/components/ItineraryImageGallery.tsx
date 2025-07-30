@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Eye, Grid3x3, Minimize2 } from 'lucide-react';
+import { Plus, Eye } from 'lucide-react';
 import { ItineraryImage } from '@/types';
 import ImageUploader from './ImageUploader';
 import ImageViewer from './ImageViewer';
 import { imageApi } from '@/services/imageApi';
+import { useTravelStore } from '@/stores/travelStore';
 
 interface ItineraryImageGalleryProps {
   images: ItineraryImage[];
   itineraryItemId: string;
+  travelId: string;
   displayMode?: 'thumbnail' | 'full' | 'grid';
   canEdit?: boolean;
   onImagesChange?: (images: ItineraryImage[]) => void;
@@ -18,20 +20,26 @@ interface ItineraryImageGalleryProps {
 export default function ItineraryImageGallery({
   images = [],
   itineraryItemId,
+  travelId,
   displayMode = 'thumbnail',
   canEdit = false,
   onImagesChange,
 }: ItineraryImageGalleryProps) {
   const [showUploader, setShowUploader] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
-  const [isCompact, setIsCompact] = useState(true);
+  const { fetchItineraryItems } = useTravelStore();
 
   const handleImagesSelected = async (files: File[]) => {
     try {
       const uploadedImages = await imageApi.uploadImages(itineraryItemId, files);
-      if (uploadedImages.length > 0 && onImagesChange) {
-        const updatedImages = [...images, ...uploadedImages];
-        onImagesChange(updatedImages);
+      if (uploadedImages.length > 0) {
+        // 旅程データを再取得してすべてのデータを最新に更新
+        await fetchItineraryItems(travelId);
+        
+        if (onImagesChange) {
+          const updatedImages = [...images, ...uploadedImages];
+          onImagesChange(updatedImages);
+        }
       }
     } catch (error) {
       console.error('Failed to upload images:', error);
@@ -39,14 +47,14 @@ export default function ItineraryImageGallery({
     }
   };
 
-  const handleUrlAdded = async (url: string) => {
-    console.log('URL画像の追加は現在サポートされていません:', url);
-    alert('URL画像の追加は現在サポートされていません');
-  };
 
   const handleImageDelete = async (imageId: string) => {
     try {
       await imageApi.deleteImage(imageId);
+      
+      // 旅程データを再取得してすべてのデータを最新に更新
+      await fetchItineraryItems(travelId);
+      
       const filteredImages = images.filter(img => img.id !== imageId);
       if (onImagesChange) {
         onImagesChange(filteredImages);
@@ -57,35 +65,17 @@ export default function ItineraryImageGallery({
     }
   };
 
-  const openViewer = () => {
-    setShowViewer(true);
-  };
-
   if (images.length === 0 && !canEdit) {
     return null;
   }
 
-  // サイズとレイアウトの設定
-  const imageSize = isCompact ? 'w-16 h-16' : 'w-24 h-24';
-  const eyeSize = isCompact ? 'w-4 h-4' : 'w-6 h-6';
-  const plusSize = isCompact ? 'w-4 h-4' : 'w-6 h-6';
+  // コンパクトサイズ固定
+  const imageSize = 'w-16 h-16';
+  const eyeSize = 'w-4 h-4';
+  const plusSize = 'w-4 h-4';
 
   return (
-    <div className="space-y-2">
-      {/* 表示切り替えボタン */}
-      {images.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => setIsCompact(!isCompact)}
-            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-            title={isCompact ? "大きく表示" : "小さく表示"}
-          >
-            {isCompact ? <Grid3x3 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-1 max-w-full">
+    <div className="grid grid-cols-[repeat(auto-fit,4rem)] gap-1 justify-start max-w-full">
         {/* 画像表示 */}
         {images.map((image) => (
           <div
@@ -120,14 +110,12 @@ export default function ItineraryImageGallery({
             </div>
           </div>
         )}
-      </div>
 
       {/* モーダルコンポーネント */}
       <ImageUploader
         isOpen={showUploader}
         onClose={() => setShowUploader(false)}
         onImagesSelected={handleImagesSelected}
-        onUrlAdded={handleUrlAdded}
         maxFiles={5}
       />
 

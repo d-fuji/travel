@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Camera, Upload, Link, X, Image as ImageIcon } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, X } from 'lucide-react';
 
 interface ImageUploaderProps {
   onImagesSelected: (files: File[]) => void;
-  onUrlAdded: (url: string) => void;
   maxFiles?: number;
   isOpen: boolean;
   onClose: () => void;
@@ -13,51 +12,67 @@ interface ImageUploaderProps {
 
 export default function ImageUploader({
   onImagesSelected,
-  onUrlAdded,
   maxFiles = 5,
   isOpen,
   onClose,
 }: ImageUploaderProps) {
-  const [urlInput, setUrlInput] = useState('');
-  const [dragOver, setDragOver] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // ファイルが変更されたときにプレビューURLを更新
+  useEffect(() => {
+    // 古いURLをクリーンアップ
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    
+    // 新しいURLを作成
+    const newUrls = selectedFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls(newUrls);
+
+    // クリーンアップ関数
+    return () => {
+      newUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [selectedFiles]); // previewUrls を依存配列から除外
 
   if (!isOpen) return null;
 
   const handleFileSelect = (files: FileList | null) => {
     if (files && files.length > 0) {
-      const fileArray = Array.from(files).slice(0, maxFiles);
-      onImagesSelected(fileArray);
+      const newFiles = Array.from(files);
+      const totalFiles = selectedFiles.length + newFiles.length;
+      
+      if (totalFiles > maxFiles) {
+        const remainingSlots = maxFiles - selectedFiles.length;
+        const filesToAdd = newFiles.slice(0, remainingSlots);
+        setSelectedFiles([...selectedFiles, ...filesToAdd]);
+      } else {
+        setSelectedFiles([...selectedFiles, ...newFiles]);
+      }
+    }
+  };
+
+  const handleUpload = () => {
+    if (selectedFiles.length > 0) {
+      onImagesSelected(selectedFiles);
+      setSelectedFiles([]);
+      setPreviewUrls([]);
       onClose();
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
+  const handleCancel = () => {
+    setSelectedFiles([]);
+    setPreviewUrls([]);
+    onClose();
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
+  const removeFile = (index: number) => {
+    setSelectedFiles(files => files.filter((_, i) => i !== index));
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const files = e.dataTransfer.files;
-    handleFileSelect(files);
-  };
 
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (urlInput.trim()) {
-      onUrlAdded(urlInput.trim());
-      setUrlInput('');
-      onClose();
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -65,7 +80,7 @@ export default function ImageUploader({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900">画像を追加</h3>
           <button
-            onClick={onClose}
+            onClick={handleCancel}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
           >
             <X className="w-5 h-5" />
@@ -73,66 +88,86 @@ export default function ImageUploader({
         </div>
 
         <div className="space-y-4">
-          {/* ドラッグ&ドロップエリア */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              dragOver
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 mb-2">
-              画像をドラッグ&ドロップ
-            </p>
-            <p className="text-xs text-gray-500">
-              または下のボタンで選択してください
-            </p>
-          </div>
+          {selectedFiles.length === 0 ? (
+            /* アップロードオプション */
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Camera className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">カメラ</span>
+              </button>
 
-          {/* アップロードオプション */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Camera className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">カメラ</span>
-            </button>
-
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Upload className="w-5 h-5 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">ギャラリー</span>
-            </button>
-          </div>
-
-          {/* URL入力 */}
-          <form onSubmit={handleUrlSubmit} className="space-y-3">
-            <div className="flex items-center justify-center gap-2 p-2 border-t border-gray-200">
-              <Link className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">URLから追加</span>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">ギャラリー</span>
+              </button>
             </div>
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="画像のURLを入力"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-            <button
-              type="submit"
-              disabled={!urlInput.trim()}
-              className="w-full py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              URLから追加
-            </button>
-          </form>
+          ) : (
+            /* 選択された画像のプレビュー */
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-gray-700">選択された画像 ({selectedFiles.length}枚)</h4>
+              <div className="grid grid-cols-3 gap-2">
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={previewUrls[index]}
+                      alt={`選択画像 ${index + 1}`}
+                      className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              {/* 追加で画像を選択するボタン */}
+              {selectedFiles.length < maxFiles && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                  >
+                    <Camera className="w-4 h-4 text-gray-600" />
+                    <span className="text-gray-700">カメラで追加</span>
+                  </button>
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                  >
+                    <Upload className="w-4 h-4 text-gray-600" />
+                    <span className="text-gray-700">ギャラリーから追加</span>
+                  </button>
+                </div>
+              )}
+              
+              {/* アップロードとキャンセルボタン */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleUpload}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  アップロード ({selectedFiles.length}枚)
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* 隠しファイル入力 */}
@@ -149,6 +184,7 @@ export default function ImageUploader({
           type="file"
           accept="image/*"
           capture="environment"
+          multiple
           onChange={(e) => handleFileSelect(e.target.files)}
           className="hidden"
         />

@@ -203,6 +203,7 @@ export default function ItineraryBoard({
                                 key={item.id}
                                 item={item}
                                 expenses={itemExpenses}
+                                travelId={travelId}
                                 isEditing={editingItem === item.id}
                                 onEdit={() => setEditingItem(item.id)}
                                 onSave={(_updates) => {
@@ -262,6 +263,7 @@ export default function ItineraryBoard({
 interface ItineraryItemCardProps {
   item: ItineraryItem;
   expenses: Expense[];
+  travelId: string;
   isEditing: boolean;
   onEdit: () => void;
   onSave: (_updates: Partial<ItineraryItem>) => void;
@@ -273,6 +275,7 @@ interface ItineraryItemCardProps {
 function ItineraryItemCard({
   item,
   expenses,
+  travelId,
   isEditing,
   onEdit,
   onSave,
@@ -435,6 +438,7 @@ function ItineraryItemCard({
         <ItineraryImageGallery
           images={item.images || []}
           itineraryItemId={item.id}
+          travelId={travelId}
           displayMode={item.imageDisplayMode || 'thumbnail'}
           canEdit={true}
           onImagesChange={(images) => {
