@@ -117,16 +117,23 @@ export default function ImageViewer({
     setTouchEnd(null);
   };
 
+  const handleToggleControls = () => {
+    setShowControls(!showControls);
+  };
+
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
-      onClick={() => setShowControls(!showControls)}
+      onClick={handleToggleControls}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
       {/* 閉じるボタン */}
       <button
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         className={`absolute top-4 right-4 p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-all z-10 ${
           showControls ? 'opacity-100' : 'opacity-0'
         }`}
@@ -166,7 +173,6 @@ export default function ImageViewer({
       {/* 画像表示 */}
       <div 
         className="relative w-full h-full p-2 md:p-4"
-        onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -238,7 +244,7 @@ export default function ImageViewer({
               // ダウンロード機能（モック）
               console.log('Download image:', currentImage.originalFileName);
             }}
-            className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg"
+            className="hidden md:block p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg"
             title="ダウンロード"
           >
             <Download className="w-4 h-4" />
