@@ -297,26 +297,26 @@ function ItineraryItemCard({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-2 py-1 text-sm border rounded"
+            className="w-full px-2 py-1 text-base border rounded"
             placeholder="タイトル"
           />
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-2 py-1 text-sm border rounded resize-none"
+            className="w-full px-2 py-1 text-base border rounded resize-none"
             rows={2}
             placeholder="説明"
           />
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="w-full px-2 py-1 text-sm border rounded"
+            className="w-full px-2 py-1 text-base border rounded"
             placeholder="場所"
           />
           <input
             value={locationUrl}
             onChange={(e) => setLocationUrl(e.target.value)}
-            className="w-full px-2 py-1 text-sm border rounded"
+            className="w-full px-2 py-1 text-base border rounded"
             placeholder="場所のURL（任意）"
             type="url"
           />
@@ -325,14 +325,14 @@ function ItineraryItemCard({
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="flex-1 px-2 py-1 text-sm border rounded"
+              className="flex-1 px-2 py-1 text-base border rounded"
             />
             <span className="text-sm text-gray-500 self-center">〜</span>
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="flex-1 px-2 py-1 text-sm border rounded"
+              className="flex-1 px-2 py-1 text-base border rounded"
             />
           </div>
         </div>
@@ -532,7 +532,7 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
               />
             </div>
             <div>
@@ -543,7 +543,7 @@ function AddItemModal({ onSave, onCancel }: AddItemModalProps) {
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
               />
             </div>
           </div>
