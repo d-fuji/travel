@@ -66,10 +66,16 @@ export const imageApi = {
   // 旅程アイテムの画像一覧取得
   getImages: async (itineraryItemId: string): Promise<ItineraryImage[]> => {
     try {
-      const response = await imageApiClient.get(`/itinerary/${itineraryItemId}/images`);
+      console.log('imageApi.getImages called with:', itineraryItemId);
+      const url = `/itinerary/${itineraryItemId}/images`;
+      console.log('Making request to:', url);
+      const response = await imageApiClient.get(url);
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
       return response.data || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch images:', error);
+      console.error('Error details:', error.response?.status, error.response?.data);
       return [];
     }
   },

@@ -35,6 +35,14 @@ export default function ItineraryBoard({
     fetchExpenses(travelId);
   }, [travelId, fetchItineraryItems, fetchExpenses]);
 
+  // Debug: itinerary itemsの内容を確認
+  useEffect(() => {
+    if (itineraryItems.length > 0) {
+      console.log('Itinerary items loaded:', itineraryItems);
+      console.log('First item images:', itineraryItems[0]?.images);
+    }
+  }, [itineraryItems]);
+
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<{
     date: string;
@@ -397,7 +405,7 @@ function ItineraryItemCard({
           )}
           
           {/* 画像ギャラリー */}
-          <div className="mt-3">
+          <div className="mt-3 overflow-hidden">
             <ItineraryImageGallery
               images={item.images || []}
               itineraryItemId={item.id}
