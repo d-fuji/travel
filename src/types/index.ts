@@ -205,3 +205,39 @@ export interface InvitationDetails {
   memberCount: number;
   isValid: boolean;
 }
+
+// 事前準備タスク管理
+export interface PreTravelTask {
+  id: string;
+  travelId: string;
+  title: string;
+  category: TaskCategory;
+  assignedTo: string[]; // User IDs
+  dueDate?: Date;
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'completed';
+  memo?: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
+  completedBy?: string;
+}
+
+export interface TaskCategory {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  order: number;
+}
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: 'domestic' | 'international' | 'group' | 'custom';
+  tasks: Omit<PreTravelTask, 'id' | 'travelId' | 'assignedTo' | 'createdBy' | 'createdAt' | 'updatedAt'>[];
+  isPublic: boolean;
+  createdBy?: string;
+}

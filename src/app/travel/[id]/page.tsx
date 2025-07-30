@@ -8,8 +8,9 @@ import Layout from '@/components/Layout';
 import ItineraryBoard from '@/components/ItineraryBoard';
 import WishlistPanel from '@/components/WishlistPanel';
 import ExpenseTracker from '@/components/ExpenseTracker';
+import PreTravelTasks from '@/components/PreTravelTasks';
 import { formatDate, parseDate } from '@/utils/dateUtils';
-import { Calendar, Heart, ArrowLeft, Settings, Wallet, Lock } from 'lucide-react';
+import { Calendar, Heart, ArrowLeft, Settings, Wallet, Lock, CheckSquare } from 'lucide-react';
 import EditTravelModal from '@/components/EditTravelModal';
 
 export default function TravelDetailPage({
@@ -22,7 +23,7 @@ export default function TravelDetailPage({
   const { travels, groups, fetchTravels, fetchGroups, isLoading } =
     useTravelStore();
 
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist' | 'expenses'>(
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'wishlist' | 'expenses' | 'tasks'>(
     'itinerary'
   );
   const [mounted, setMounted] = useState(false);
@@ -113,6 +114,7 @@ export default function TravelDetailPage({
 
   const tabs = [
     { key: 'itinerary' as const, label: '旅程', icon: Calendar, guestAllowed: true },
+    { key: 'tasks' as const, label: '準備', icon: CheckSquare, guestAllowed: true },
     { key: 'wishlist' as const, label: '行きたい', icon: Heart, guestAllowed: false },
     { key: 'expenses' as const, label: '費用', icon: Wallet, guestAllowed: false },
   ];
@@ -200,6 +202,12 @@ export default function TravelDetailPage({
               startDate={parseDate(travel.startDate) || new Date()}
               endDate={parseDate(travel.endDate) || new Date()}
             />
+          )}
+
+          {activeTab === 'tasks' && (
+            <div className="p-4">
+              <PreTravelTasks travelId={travel.id} />
+            </div>
           )}
 
           {activeTab === 'wishlist' && <WishlistPanel travelId={travel.id} />}
